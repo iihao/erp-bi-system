@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Element Plus 测试</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <style>
+    body { padding: 40px; font-family: sans-serif; }
+    .test-card { margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <h1>Element Plus 按钮测试</h1>
+  
+  <div class="test-card">
+    <h3>如果能看到下面的按钮和文字，说明 Element Plus 正常：</h3>
+    <button class="el-button el-button--primary">
+      <span>主要按钮</span>
+    </button>
+    <button class="el-button el-button--success">
+      <span>成功按钮</span>
+    </button>
+    <button class="el-button el-button--danger">
+      <span>危险按钮</span>
+    </button>
+  </div>
+  
+  <div class="test-card">
+    <h3>表格测试：</h3>
+    <table class="el-table" style="width: 100%">
+      <thead>
+        <tr>
+          <th class="el-table__cell">名称</th>
+          <th class="el-table__cell">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="el-table__cell">测试数据</td>
+          <td class="el-table__cell">
+            <button class="el-button el-button--small el-button--primary">
+              <span>预览</span>
+            </button>
+            <button class="el-button el-button--small el-button--danger">
+              <span>删除</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div style="margin-top: 20px; color: #67c23a;">
+    ✅ 如果所有按钮文字都正常显示，说明浏览器渲染正常
+  </div>
+</body>
+</html>

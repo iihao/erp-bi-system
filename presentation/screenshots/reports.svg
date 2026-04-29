@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <rect width="1000" height="600" fill="#f8f9fa"/>
+
+  <!-- Header -->
+  <rect width="1000" height="50" fill="#2c3e50"/>
+  <text x="30" y="32" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">销售报表</text>
+
+  <!-- Filter Bar -->
+  <rect x="30" y="70" width="940" height="50" rx="5" fill="white" stroke="#dee2e6"/>
+  <text x="50" y="100" font-family="Arial, sans-serif" font-size="13" fill="#2c3e50">日期范围：</text>
+  <rect x="140" y="85" width="150" height="25" rx="3" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="155" y="102" font-family="Arial, sans-serif" font-size="12" fill="#6c757d">2026-02-01</text>
+  <text x="300" y="100" font-family="Arial, sans-serif" font-size="13" fill="#2c3e50">至</text>
+  <rect x="320" y="85" width="150" height="25" rx="3" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="335" y="102" font-family="Arial, sans-serif" font-size="12" fill="#6c757d">2026-02-28</text>
+  <rect x="500" y="85" width="80" height="25" rx="3" fill="#3498db"/>
+  <text x="540" y="102" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">查询</text>
+  <rect x="600" y="85" width="80" height="25" rx="3" fill="#27ae60"/>
+  <text x="640" y="102" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">导出 Excel</text>
+
+  <!-- Data Table -->
+  <rect x="30" y="140" width="940" height="400" rx="5" fill="white" stroke="#dee2e6"/>
+
+  <!-- Table Header -->
+  <rect x="30" y="140" width="940" height="40" rx="5" fill="#3498db"/>
+  <text x="60" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">日期</text>
+  <text x="200" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">订单数</text>
+  <text x="350" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">销售额</text>
+  <text x="500" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">客户数</text>
+  <text x="650" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">件数</text>
+  <text x="800" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">日均客单价</text>
+
+  <!-- Table Rows -->
+  <rect x="30" y="180" width="940" height="35" fill="#f8f9fa"/>
+  <text x="60" y="203" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">2026-02-01</text>
+  <text x="200" y="203" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">156</text>
+  <text x="350" y="203" font-family="Arial, sans-serif" font-size="12" fill="#27ae60">¥ 45,678</text>
+  <text x="500" y="203" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">89</text>
+  <text x="650" y="203" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">312</text>
+  <text x="800" y="203" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">¥ 513.24</text>
+
+  <rect x="30" y="215" width="940" height="35"/>
+  <text x="60" y="238" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">2026-02-02</text>
+  <text x="200" y="238" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">178</text>
+  <text x="350" y="238" font-family="Arial, sans-serif" font-size="12" fill="#27ae60">¥ 52,341</text>
+  <text x="500" y="238" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">95</text>
+  <text x="650" y="238" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">389</text>
+  <text x="800" y="238" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">¥ 550.96</text>
+
+  <rect x="30" y="250" width="940" height="35" fill="#f8f9fa"/>
+  <text x="60" y="273" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">2026-02-03</text>
+  <text x="200" y="273" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">145</text>
+  <text x="350" y="273" font-family="Arial, sans-serif" font-size="12" fill="#27ae60">¥ 41,256</text>
+  <text x="500" y="273" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">82</text>
+  <text x="650" y="273" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">278</text>
+  <text x="800" y="273" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">¥ 502.63</text>
+
+  <!-- More placeholder rows -->
+  <text x="500" y="350" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#adb5bd">更多数据行...</text>
+
+  <!-- Placeholder Text -->
+  <text x="500" y="570" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#adb5bd">
+    截图占位符 - 请访问 http://localhost:3000/reports/sales 获取实际截图
+  </text>
+</svg>

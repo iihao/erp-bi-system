@@ -1,0 +1,37 @@
+flowchart TB
+    P[AI问数页面]
+
+    subgraph A[页面结构]
+      direction LR
+      A1[问题输入区]
+      A2[快捷问题区]
+      A3[结果展示区]
+      A4[历史记录区]
+    end
+
+    subgraph R[结果展示区]
+      direction LR
+      R1[SQL展示]
+      R2[智能解读]
+      R3[图表渲染]
+      R4[表格明细]
+    end
+
+    P --> A1
+    P --> A2
+    P --> A3
+    P --> A4
+
+    A3 --> R1
+    A3 --> R2
+    A3 --> R3
+    A3 --> R4
+
+    A1 --> Q[fetch提交问数请求]
+    Q --> B[后端返回sql/data/columns/summary]
+    B --> R1
+    B --> R2
+    B --> R3
+    B --> R4
+    A4 --> H[本地历史缓存]
+    H --> A1

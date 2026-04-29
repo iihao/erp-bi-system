@@ -1,0 +1,36 @@
+flowchart TB
+    SRC[ERP/SAP/OA/Excel] --> EX[数据抽取层]
+    EX --> STG[ODS暂存层]
+    STG --> CLS[清洗转换层]
+    CLS --> DWD[DWD标准明细层]
+    DWD --> AGG[主题聚合层]
+    AGG --> DWS[DWS汇总分析层]
+    DWS --> PUB[ADS应用输出层]
+
+    ORC[调度编排器] --> EX
+    ORC --> CLS
+    ORC --> AGG
+    ORC --> PUB
+
+    MON[监控告警] --> ORC
+    LOG[执行日志] --> MON
+    VAL[质量校验] --> CLS
+    VAL --> DWD
+
+    subgraph T1[ETL控制面]
+      ORC
+      MON
+      LOG
+      VAL
+    end
+
+    subgraph T2[ETL数据面]
+      SRC
+      EX
+      STG
+      CLS
+      DWD
+      AGG
+      DWS
+      PUB
+    end

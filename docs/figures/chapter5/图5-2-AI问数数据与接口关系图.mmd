@@ -1,0 +1,47 @@
+%%{init: {'flowchart': {'curve': 'stepAfter'}}}%%
+flowchart LR
+    U[前台用户]
+    A[后台管理员]
+
+    subgraph I1[前台接口]
+      direction TB
+      P1[/execute/]
+      P2[/quota/]
+      P3[/history/]
+    end
+
+    subgraph I2[后台接口]
+      direction TB
+      A1[/records/]
+      A2[/stats/]
+      A3[/trend/]
+      A4[/standard-sql/]
+      A5[/schema/]
+    end
+
+    subgraph D[核心数据对象]
+      direction TB
+      D1[用户AI配置]
+      D2[标准SQL库]
+      D3[问数日志库]
+      D4[数据库表结构]
+    end
+
+    U --> P1
+    U --> P2
+    U --> P3
+    A --> A1
+    A --> A2
+    A --> A3
+    A --> A4
+    A --> A5
+
+    P1 --> D1
+    P1 --> D2
+    P1 --> D3
+    P3 --> D3
+    A1 --> D3
+    A2 --> D3
+    A3 --> D3
+    A4 --> D2
+    A5 --> D4

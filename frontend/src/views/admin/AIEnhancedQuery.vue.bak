@@ -1,0 +1,935 @@
+<template>
+  <div class="ai-query-enhanced-page">
+    <el-container class="page-container">
+      <!-- 左侧：历史记录和知识库 -->
+      <el-aside width="320px" class="sidebar-panel">
+        <el-card class="panel-card">
+          <template #header>
+            <div class="panel-header">
+              <span>📚 查询历史</span>
+              <el-button size="small" @click="clearHistory">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3,6 5,6 21,6"/>
+                  <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"/>
+                </svg>
+                清空
+              </el-button>
+            </div>
+          </template>
+
+          <el-input
+            v-model="historySearch"
+            placeholder="搜索历史查询..."
+            size="small"
+            style="margin-bottom: 12px;"
+          >
+            <template #prefix>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </template>
+          </el-input>
+
+          <el-scrollbar height="300px">
+            <div
+              v-for="record in filteredHistory"
+              :key="record.id"
+              class="history-item"
+              @click="loadHistory(record)"
+            >
+              <div class="history-question">{{ record.question }}</div>
+              <div class="history-time">{{ formatDate(record.timestamp) }}</div>
+            </div>
+          </el-scrollbar>
+        </el-card>
+
+        <!-- 数据库结构信息 -->
+        <el-card class="panel-card" style="margin-top: 16px;">
+          <template #header>
+            <div class="panel-header">
+              <span>🔍 数据库结构</span>
+            </div>
+          </template>
+
+          <el-scrollbar height="200px">
+            <div class="schema-section">
+              <div class="schema-table" v-for="table in dbSchema" :key="table.name">
+                <div class="table-name">{{ table.name }}</div>
+                <div class="table-fields">
+                  <div v-for="field in table.fields" :key="field.name" class="field-item">
+                    <span class="field-name">{{ field.name }}</span>
+                    <span class="field-type">({{ field.type }})</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-scrollbar>
+        </el-card>
+      </el-aside>
+
+      <!-- 中间：主内容区域 -->
+      <el-main class="main-content">
+        <div class="query-section">
+          <el-card class="query-card">
+            <template #header>
+              <div class="card-header">
+                <div class="header-title">
+                  <svg class="ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>🤖 AI 智能问数</span>
+                  <el-tag size="small" type="success" effect="dark">Qwen3.5-Plus</el-tag>
+                </div>
+                <div class="header-actions">
+                  <el-button size="small" @click="clearAll">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                    </svg>
+                    清空
+                  </el-button>
+                </div>
+              </div>
+            </template>
+
+            <div class="query-input-area">
+              <el-input
+                v-model="currentQuestion"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入您的问题，例如：'上个月销售额最高的产品是什么？' 或 '各品类销售占比情况'"
+                @keyup.enter.ctrl="handleQuery"
+                maxlength="500"
+                show-word-limit
+              />
+
+              <div class="quick-actions">
+                <el-button-group>
+                  <el-button type="primary" @click="handleQuery" :loading="loading" size="large">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    AI 查询
+                  </el-button>
+                  <el-button @click="showAdvancedOptions = !showAdvancedOptions" size="large">
+                    <svg class="setting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H8a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V8c.09.9.4 1.77 1 2.5a2 2 0 010 2.83z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </el-button>
+                </el-button-group>
+
+                <el-button @click="showSampleQuestions = true" type="info" plain size="large">
+                  示例问题
+                </el-button>
+              </div>
+
+              <!-- 高级选项 -->
+              <el-collapse-transition>
+                <div v-show="showAdvancedOptions" class="advanced-options">
+                  <el-form :model="advancedOptions" size="small" label-position="top">
+                    <el-row :gutter="12">
+                      <el-col :span="12">
+                        <el-form-item label="结果数量">
+                          <el-input-number v-model="advancedOptions.limit" :min="1" :max="1000" />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="相似度阈值">
+                          <el-slider v-model="advancedOptions.similarity" :min="0" :max="1" :step="0.1" />
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
+                    <el-row :gutter="12">
+                      <el-col :span="12">
+                        <el-form-item label="查询模式">
+                          <el-select v-model="advancedOptions.mode">
+                            <el-option label="标准模式" value="standard" />
+                            <el-option label="深度分析" value="analysis" />
+                            <el-option label="图表模式" value="visualization" />
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item label="优先级">
+                          <el-select v-model="advancedOptions.priority">
+                            <el-option label="普通" value="normal" />
+                            <el-option label="高" value="high" />
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
+                  </el-form>
+                </div>
+              </el-collapse-transition>
+            </div>
+          </el-card>
+        </div>
+
+        <!-- 结果展示区域 -->
+        <div v-if="queryResult" class="result-section">
+          <el-card class="result-card">
+            <template #header>
+              <div class="card-header">
+                <span>📊 查询结果</span>
+                <div class="result-stats">
+                  <el-tag size="small" type="success">{{ queryResult.data?.length || 0 }} 条记录</el-tag>
+                  <el-tag size="small" type="info">耗时 {{ executionTime }}ms</el-tag>
+                </div>
+              </div>
+            </template>
+
+            <!-- AI 解释 -->
+            <div class="ai-explanation" v-if="queryResult.explanation">
+              <el-alert
+                :title="queryResult.explanation"
+                type="info"
+                :closable="false"
+                show-icon
+              />
+            </div>
+
+            <!-- 生成的 SQL -->
+            <div class="sql-section">
+              <div class="section-header">
+                <span>📝 生成的 SQL</span>
+                <el-button size="small" @click="copySql">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  复制
+                </el-button>
+              </div>
+              <pre class="sql-code">{{ queryResult.sql }}</pre>
+            </div>
+
+            <!-- 可视化结果 -->
+            <div class="visualization-section" v-if="showVisualization">
+              <div class="section-header">
+                <span>📈 数据可视化</span>
+                <el-button-group>
+                  <el-button size="small" :type="chartType === 'bar' ? 'primary' : ''" @click="chartType = 'bar'">
+                    柱状图
+                  </el-button>
+                  <el-button size="small" :type="chartType === 'line' ? 'primary' : ''" @click="chartType = 'line'">
+                    折线图
+                  </el-button>
+                  <el-button size="small" :type="chartType === 'pie' ? 'primary' : ''" @click="chartType = 'pie'">
+                    饼图
+                  </el-button>
+                </el-button-group>
+              </div>
+              <div class="chart-container">
+                <component
+                  :is="getChartComponent(chartType)"
+                  :data="chartData"
+                  style="width: 100%; height: 300px;"
+                />
+              </div>
+            </div>
+
+            <!-- 数据表格 -->
+            <div class="data-table-section">
+              <div class="section-header">
+                <span>📋 数据表格</span>
+                <div class="table-actions">
+                  <el-button size="small" @click="exportToCsv">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="7 10 12 15 17 10" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="12" y1="15" x2="12" y2="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    导出 CSV
+                  </el-button>
+                  <el-button size="small" @click="exportToExcel">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M16 13H8M16 17H8M10 9H8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    导出 Excel
+                  </el-button>
+                </div>
+              </div>
+              <el-table
+                :data="queryResult.data"
+                border
+                stripe
+                height="400"
+                style="width: 100%"
+              >
+                <el-table-column
+                  v-for="col in queryResult.columns"
+                  :key="col"
+                  :prop="col"
+                  :label="col"
+                  :min-width="120"
+                  show-overflow-tooltip
+                />
+              </el-table>
+            </div>
+          </el-card>
+        </div>
+
+        <!-- 初始状态 -->
+        <div v-else class="empty-state">
+          <el-empty description="输入问题，AI 帮您查询数据">
+            <template #image>
+              <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </template>
+          </el-empty>
+        </div>
+      </el-main>
+
+      <!-- 右侧：AI 建议和智能辅助 -->
+      <el-aside width="320px" class="assistant-panel">
+        <el-card class="panel-card">
+          <template #header>
+            <div class="panel-header">
+              <span>💡 AI 建议</span>
+            </div>
+          </template>
+
+          <div class="suggestions-list">
+            <div
+              v-for="suggestion in suggestions"
+              :key="suggestion.id"
+              class="suggestion-item"
+              @click="applySuggestion(suggestion)"
+            >
+              <div class="suggestion-question">{{ suggestion.question }}</div>
+              <div class="suggestion-description">{{ suggestion.description }}</div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 智能分析 -->
+        <el-card class="panel-card" style="margin-top: 16px;">
+          <template #header>
+            <div class="panel-header">
+              <span>📊 数据洞察</span>
+            </div>
+          </template>
+
+          <div class="insights-content">
+            <div class="insight-item">
+              <div class="insight-title">数据质量评分</div>
+              <el-rate v-model="dataQualityScore" disabled show-score score-template="{value} 分" />
+            </div>
+            <div class="insight-item">
+              <div class="insight-title">查询准确性</div>
+              <el-progress :percentage="accuracyPercentage" :color="accuracyColor" />
+            </div>
+            <div class="insight-item">
+              <div class="insight-title">智能优化建议</div>
+              <div class="optimization-tips">
+                <el-tag v-for="tip in optimizationTips" :key="tip" type="warning" size="small" style="margin-right: 6px; margin-bottom: 6px;">
+                  {{ tip }}
+                </el-tag>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-aside>
+    </el-container>
+
+    <!-- 示例问题弹窗 -->
+    <el-dialog v-model="showSampleQuestions" title="示例问题" width="600px">
+      <el-row :gutter="12">
+        <el-col v-for="sample in sampleQuestions" :key="sample" :span="24">
+          <el-card class="sample-question-card" shadow="hover" @click="selectSample(sample)">
+            <div class="sample-question">{{ sample }}</div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, reactive } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+// 页面状态
+const currentQuestion = ref('')
+const loading = ref(false)
+const queryResult = ref(null)
+const executionTime = ref(0)
+const showAdvancedOptions = ref(false)
+const showSampleQuestions = ref(false)
+const showVisualization = ref(true)
+
+// 历史记录
+const historySearch = ref('')
+const queryHistory = ref([
+  { id: 1, question: '上个月销售额最高的产品是什么？', timestamp: new Date(Date.now() - 3600000) },
+  { id: 2, question: '各品类销售占比情况', timestamp: new Date(Date.now() - 7200000) },
+  { id: 3, question: '客户张三的订单有哪些？', timestamp: new Date(Date.now() - 86400000) },
+  { id: 4, question: '本月总销售额是多少？', timestamp: new Date(Date.now() - 172800000) }
+])
+
+// 高级选项
+const advancedOptions = reactive({
+  limit: 100,
+  similarity: 0.8,
+  mode: 'standard',
+  priority: 'normal'
+})
+
+// 数据库结构
+const dbSchema = ref([
+  {
+    name: 'products',
+    fields: [
+      { name: 'product_id', type: 'INT' },
+      { name: 'product_name', type: 'VARCHAR' },
+      { name: 'category', type: 'VARCHAR' },
+      { name: 'unit_price', type: 'DECIMAL' }
+    ]
+  },
+  {
+    name: 'customers',
+    fields: [
+      { name: 'customer_id', type: 'INT' },
+      { name: 'customer_name', type: 'VARCHAR' },
+      { name: 'industry', type: 'VARCHAR' },
+      { name: 'city', type: 'VARCHAR' }
+    ]
+  },
+  {
+    name: 'sales_orders',
+    fields: [
+      { name: 'order_id', type: 'INT' },
+      { name: 'customer_id', type: 'INT' },
+      { name: 'order_date', type: 'DATETIME' },
+      { name: 'final_amount', type: 'DECIMAL' }
+    ]
+  }
+])
+
+// AI 建议
+const suggestions = ref([
+  { id: 1, question: '查询销售额趋势', description: '按时间维度分析销售额变化' },
+  { id: 2, question: '客户分类统计', description: '按行业或地区统计客户分布' },
+  { id: 3, question: '产品热销排行', description: '统计销量最高产品排名' },
+  { id: 4, question: '库存预警查询', description: '查找库存不足的产品' }
+])
+
+// 智能分析
+const dataQualityScore = ref(4.5)
+const accuracyPercentage = ref(92)
+const accuracyColor = computed(() => {
+  if (accuracyPercentage.value >= 90) return '#67C23A'
+  if (accuracyPercentage.value >= 70) return '#E6A23C'
+  return '#F56C6C'
+})
+
+const optimizationTips = ref([
+  '建议添加时间范围筛选',
+  '考虑按维度字段分组',
+  '可优化索引提升查询性能'
+])
+
+// 示例问题
+const sampleQuestions = [
+  '上个月销售额最高的产品是什么？',
+  '客户张三的订单有哪些？',
+  '各品类的销售占比是多少？',
+  '本月总销售额是多少？',
+  '库存最少的5个产品',
+  '最近一周的订单趋势',
+  '哪个地区的客户消费最高？',
+  '产品的平均售价对比'
+]
+
+// 图表相关
+const chartType = ref('bar')
+const chartData = ref([])
+
+// 计算属性
+const filteredHistory = computed(() => {
+  if (!historySearch.value) return queryHistory.value
+  return queryHistory.value.filter(record =>
+    record.question.toLowerCase().includes(historySearch.value.toLowerCase())
+  )
+})
+
+// 方法
+// API 请求封装
+const apiRequest = async (method, url, options = {}) => {
+  const token = localStorage.getItem('token')
+  const config = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    ...options
+  }
+  const response = await fetch(url, config)
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.detail || data.message || '请求失败')
+  return data
+}
+
+const handleQuery = async () => {
+  if (!currentQuestion.value.trim()) {
+    ElMessage.warning('请输入问题')
+    return
+  }
+
+  loading.value = true
+  const startTime = Date.now()
+
+  try {
+    // 调用后端 AI 问数 API (注意：路径不带/api 前缀)
+    const result = await apiRequest('post', '/ai-query/execute-query', {
+      body: JSON.stringify({
+        question: currentQuestion.value,
+        top_k: advancedOptions.limit
+      })
+    })
+
+    executionTime.value = Date.now() - startTime
+
+    // 解析结果
+    queryResult.value = {
+      sql: result.sql || '',
+      explanation: result.explanation || 'SQL 生成成功',
+      data: result.data || [],
+      columns: result.columns || []
+    }
+
+    // 生成图表数据
+    if (result.data && result.data.length > 0) {
+      chartData.value = result.data.map(item => {
+        const chartItem = {}
+        for (const key in item) {
+          chartItem[key] = item[key]
+        }
+        return chartItem
+      })
+    }
+
+    // 添加到历史记录
+    addToHistory(currentQuestion.value)
+
+    ElMessage.success(`查询成功，耗时 ${executionTime.value}ms`)
+
+  } catch (error) {
+    console.error('AI 查询失败', error)
+    ElMessage.error('查询失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+const addToHistory = (question) => {
+  queryHistory.value.unshift({
+    id: Date.now(),
+    question,
+    timestamp: new Date()
+  })
+
+  // 只保留最近50条记录
+  if (queryHistory.value.length > 50) {
+    queryHistory.value = queryHistory.value.slice(0, 50)
+  }
+}
+
+const loadHistory = (record) => {
+  currentQuestion.value = record.question
+}
+
+const clearHistory = async () => {
+  try {
+    await ElMessageBox.confirm('确定要清空所有历史记录吗？', '确认清空', {
+      type: 'warning'
+    })
+    queryHistory.value = []
+    ElMessage.success('历史记录已清空')
+  } catch {
+    // 用户取消
+  }
+}
+
+const copySql = () => {
+  navigator.clipboard.writeText(queryResult.value.sql)
+  ElMessage.success('SQL 已复制到剪贴板')
+}
+
+const exportToCsv = () => {
+  if (!queryResult.value?.data) {
+    ElMessage.warning('没有数据可导出')
+    return
+  }
+
+  const headers = queryResult.value.columns.join(',')
+  const rows = queryResult.value.data.map(row =>
+    queryResult.value.columns.map(col =>
+      `"${String(row[col]).replace(/"/g, '""')}"`
+    ).join(',')
+  )
+
+  const csvContent = [headers, ...rows].join('\n')
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' })
+
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `query_result_${Date.now()}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+
+  ElMessage.success('数据已导出为 CSV')
+}
+
+const exportToExcel = () => {
+  ElMessage.info('Excel 导出功能即将推出...')
+}
+
+const clearAll = () => {
+  currentQuestion.value = ''
+  queryResult.value = null
+  executionTime.value = 0
+}
+
+const selectSample = (sample) => {
+  currentQuestion.value = sample
+  showSampleQuestions.value = false
+}
+
+const applySuggestion = (suggestion) => {
+  currentQuestion.value = suggestion.question
+  ElMessage.success('已填入建议问题')
+}
+
+const formatDate = (timestamp) => {
+  return new Date(timestamp).toLocaleString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getChartComponent = (type) => {
+  // 返回一个简单的占位组件，实际项目中应引入真正的图表组件
+  return {
+    name: 'ChartComponent',
+    props: ['data'],
+    template: `
+      <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 4px;">
+        <div style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
+          <div>${type === 'bar' ? '柱状图' : type === 'line' ? '折线图' : '饼图'}</div>
+          <div v-if="data" style="margin-top: 10px; font-size: 12px; color: #666;">{{ data.length }} 条数据</div>
+        </div>
+      </div>
+    `
+  }
+}
+</script>
+
+<style scoped>
+.ai-query-enhanced-page {
+  height: calc(100vh - 128px);
+  background: #f8fafc;
+}
+
+.page-container {
+  height: 100%;
+}
+
+.sidebar-panel,
+.assistant-panel {
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.main-content {
+  padding: 16px;
+  background: #f1f5f9;
+  overflow-y: auto;
+}
+
+.panel-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.history-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-item:hover {
+  border-color: var(--primary);
+  background-color: rgba(var(--primary-rgb), 0.05);
+}
+
+.history-question {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.schema-table {
+  margin-bottom: 16px;
+}
+
+.table-name {
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: rgba(var(--primary-rgb), 0.1);
+  border-radius: 4px;
+}
+
+.table-fields {
+  padding-left: 12px;
+}
+
+.field-item {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.field-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.field-type {
+  color: #64748b;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ai-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.query-input-area {
+  margin-top: 16px;
+}
+
+.quick-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  gap: 8px;
+}
+
+.setting-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  color: currentColor;
+  stroke: currentColor;
+  fill: none;
+}
+
+.advanced-options {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+}
+
+.result-section {
+  margin-top: 16px;
+}
+
+.result-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-explanation {
+  margin-bottom: 16px;
+}
+
+.sql-section,
+.visualization-section,
+.data-table-section {
+  margin-top: 16px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: middle;
+  color: currentColor;
+  stroke: currentColor;
+  fill: none;
+}
+
+.sql-code {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.chart-container {
+  height: 300px;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  color: #cbd5e1;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-item {
+  padding: 12px;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suggestion-item:hover {
+  border-color: var(--primary);
+  background-color: rgba(var(--primary-rgb), 0.05);
+}
+
+.suggestion-question {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.suggestion-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.insights-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insight-item {
+  margin-bottom: 8px;
+}
+
+.insight-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.optimization-tips {
+  margin-top: 8px;
+}
+
+.sample-question-card {
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sample-question-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sample-question {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+</style>

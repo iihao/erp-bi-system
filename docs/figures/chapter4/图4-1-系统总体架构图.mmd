@@ -1,0 +1,84 @@
+%%{init: {'flowchart': {'curve': 'stepAfter'}}}%%
+flowchart TB
+    U[业务用户/管理层]
+    A[系统管理员]
+
+    subgraph L1[表现层]
+      direction LR
+      P1[报表门户]
+      P2[AI问数入口]
+      A1[配置后台]
+      A2[数据治理后台]
+    end
+
+    subgraph L2[应用服务层]
+      direction LR
+      S1[统一API网关]
+      S2[认证与权限服务]
+      S3[报表与分析服务]
+      S4[ETL编排服务]
+      S5[AI问数服务]
+      S6[日志审计服务]
+    end
+
+    subgraph L3[智能引擎与安全治理层]
+      direction LR
+      G1[关键词提取]
+      G2[标准SQL匹配]
+      G3[大模型SQL生成]
+      G4[只读与敏感校验]
+      G5[配额控制]
+    end
+
+    subgraph L4[数据层]
+      direction LR
+      D1[业务主题数据]
+      D2[ODS/DWD/DWS/ADS]
+      D3[标准SQL库]
+      D4[问数日志库]
+      D5[用户角色权限库]
+    end
+
+    subgraph L5[基础设施层]
+      direction LR
+      I1[任务调度]
+      I2[监控告警]
+      I3[服务部署]
+      I4[缓存与消息队列]
+    end
+
+    U --> P1
+    U --> P2
+    A --> A1
+    A --> A2
+
+    P1 --> S1
+    P2 --> S1
+    A1 --> S1
+    A2 --> S1
+
+    S1 --> S2
+    S1 --> S3
+    S1 --> S4
+    S1 --> S5
+    S1 --> S6
+
+    S5 --> G1
+    G1 --> G2
+    G2 --> G4
+    G2 --> G3
+    G3 --> G4
+    G4 --> D3
+    G4 --> D4
+    G5 --> S5
+
+    S2 --> D5
+    S3 --> D1
+    S4 --> D2
+    S5 --> D3
+    S6 --> D4
+
+    S4 --> I1
+    S6 --> I2
+    S1 --> I3
+    S1 --> I4

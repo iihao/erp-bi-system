@@ -1,0 +1,26 @@
+%%{init: {'flowchart': {'curve': 'stepAfter'}}}%%
+flowchart LR
+    S[数据源] --> ODS[ODS原始层]
+    ODS --> DWD[DWD明细层]
+    DWD --> DWS[DWS主题层]
+    DWS --> ADS[ADS应用层]
+    ADS --> BI[固定报表与驾驶舱]
+    ADS --> AI[AI问数与即席分析]
+    BI --> F[管理决策]
+    AI --> F
+    F --> R[反馈修正指标口径]
+    R --> M[标准SQL库与配置策略优化]
+    M --> DWD
+    M --> DWS
+    M --> ADS
+
+    subgraph C1[治理闭环]
+      R
+      M
+    end
+
+    subgraph C2[分析闭环]
+      BI
+      AI
+      F
+    end

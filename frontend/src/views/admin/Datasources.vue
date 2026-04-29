@@ -1,0 +1,683 @@
+<template>
+  <div class="datasource-page">
+    <el-card class="header-card">
+      <div class="card-header">
+        <div class="header-left">
+          <span class="card-title">
+            <el-icon :size="18"><Connection /></el-icon>
+            数据源管理
+          </span>
+          <el-tag type="success" size="small">ETL/报表共用</el-tag>
+        </div>
+        <el-button type="primary" @click="showAddDialog">
+          <el-icon><Plus /></el-icon>
+          新增数据源
+        </el-button>
+      </div>
+    </el-card>
+
+    <!-- 搜索筛选 -->
+    <el-card class="filter-card">
+      <el-form :inline="true" :model="filterForm" class="filter-form">
+        <el-form-item label="关键词">
+          <el-input v-model="filterForm.keyword" placeholder="搜索名称或描述" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="数据库类型">
+          <el-select v-model="filterForm.db_type" placeholder="全部" clearable style="width: 150px">
+            <el-option v-for="type in dbTypes" :key="type.value" :label="type.label" :value="type.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="类别">
+          <el-select v-model="filterForm.category" placeholder="全部" clearable style="width: 150px">
+            <el-option v-for="cat in categories" :key="cat.value" :label="cat.label" :value="cat.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadData">查询</el-button>
+          <el-button @click="resetFilter">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 数据表格 -->
+    <el-card class="table-card">
+      <el-table :data="tableData" stripe border v-loading="loading" style="width: 100%">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="name" label="数据源名称" min-width="150" />
+        <el-table-column prop="department" label="业务部门" width="120" />
+        <el-table-column prop="system_name" label="业务系统" width="120" />
+        <el-table-column prop="db_type" label="数据库类型" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" :type="getDbTypeTag(row.db_type)">{{ row.db_type }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="连接信息" min-width="200">
+          <template #default="{ row }">
+            <span v-if="row.db_type.toLowerCase() === 'sqlite'">{{ row.database_name }}</span>
+            <span v-else>{{ row.host }}:{{ row.port }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="database_name" label="数据库" min-width="120">
+          <template #default="{ row }">
+            <span v-if="row.db_type.toLowerCase() !== 'sqlite'">{{ row.database_name }}</span>
+            <el-tag v-else type="info" size="small">文件模式</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+              {{ row.status === 'active' ? '已激活' : '未激活' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="480" fixed="right" class-name="action-column">
+          <template #default="{ row }">
+            <div class="action-buttons">
+              <el-button size="small" type="primary" @click="previewDatasource(row)">预览</el-button>
+              <el-button size="small" type="success" @click="syncMetadata(row)" :loading="row.syncing">同步</el-button>
+              <el-button size="small" @click="testConnection(row)">测试</el-button>
+              <el-button size="small" @click="showEditDialog(row)">编辑</el-button>
+              <el-button size="small" :type="row.status === 'active' ? 'warning' : 'success'" @click="toggleStatus(row)">
+                {{ row.status === 'active' ? '禁用' : '启用' }}
+              </el-button>
+              <el-button size="small" type="danger" @click="deleteDatasource(row)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadData"
+          @current-change="loadData"
+        />
+      </div>
+    </el-card>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="900px" @close="resetDialog" :close-on-click-modal="false">
+      <el-form :model="formData" :rules="formRules" ref="formRef" label-width="120px">
+        <el-tabs v-model="activeTab">
+          <el-tab-pane label="基本信息" name="basic">
+            <el-form-item label="数据源名称" prop="name">
+              <el-input v-model="formData.name" placeholder="例如：RYGL_YWK" />
+            </el-form-item>
+            
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="业务部门">
+                  <el-select v-model="formData.department" placeholder="请选择" clearable style="width: 100%">
+                    <el-option label="网络与信息中心" value="网络与信息中心" />
+                    <el-option label="财务部" value="财务部" />
+                    <el-option label="人力资源部" value="人力资源部" />
+                    <el-option label="销售部" value="销售部" />
+                    <el-option label="生产部" value="生产部" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="业务系统">
+                  <el-input v-model="formData.system_name" placeholder="例如：人员管理系统" />
+                  <el-button size="small" style="margin-left: 8px;">新增</el-button>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="数据源类别">
+                  <el-select v-model="formData.category" placeholder="请选择" style="width: 100%">
+                    <el-option v-for="cat in categories" :key="cat.value" :label="cat.label" :value="cat.value" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="数据源类型">
+                  <el-select v-model="formData.db_type" placeholder="请选择" @change="onDbTypeChange" style="width: 100%">
+                    <el-option v-for="type in dbTypes" :key="type.value" :label="type.label" :value="type.value" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-form-item label="驱动">
+              <el-input v-model="formData.driver" placeholder="自动生成" />
+            </el-form-item>
+
+            <!-- SQLite 专属：文件路径 -->
+            <el-form-item v-if="isSqlite" label="数据库文件路径" prop="database_name">
+              <el-input v-model="formData.database_name" placeholder="例如：/data/my_database.db" />
+              <div class="form-tip">填写 SQLite 数据库文件的绝对路径或相对路径</div>
+            </el-form-item>
+
+            <!-- 非 SQLite：显示 host/port -->
+            <template v-if="!isSqlite">
+              <el-row :gutter="20">
+                <el-col :span="16">
+                  <el-form-item label="IP 地址或域名" prop="host">
+                    <el-input v-model="formData.host" placeholder="例如：222.204.7.207" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="端口号" prop="port">
+                    <el-input-number v-model="formData.port" :min="1" :max="65535" style="width: 100%" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item label="数据库名" prop="database_name">
+                <el-input v-model="formData.database_name" placeholder="例如：mysql" />
+              </el-form-item>
+
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="用户名" prop="username">
+                    <el-input v-model="formData.username" placeholder="例如：root" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="密码" prop="password">
+                    <el-input v-model="formData.password" type="password" show-password placeholder="请输入密码" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </template>
+          </el-tab-pane>
+
+          <el-tab-pane label="高级设置" name="advanced">
+            <el-form-item label="是否采集元数据">
+              <el-radio-group v-model="formData.collect_metadata">
+                <el-radio :label="true">是</el-radio>
+                <el-radio :label="false">否</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="状态检查">
+              <el-switch v-model="formData.status_check" />
+            </el-form-item>
+
+            <el-form-item label="描述信息">
+              <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="数据源描述信息" />
+            </el-form-item>
+          </el-tab-pane>
+        </el-tabs>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="testConnectionForm" :loading="testing">测试连接</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitting">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Connection, Plus } from '@element-plus/icons-vue'
+
+const router = useRouter()
+
+const isSqlite = computed(() => formData.db_type?.toLowerCase() === 'sqlite')
+
+const apiRequest = async (method, url, data = null) => {
+  const token = localStorage.getItem('token')
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: data ? JSON.stringify(data) : null
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || '请求失败')
+  }
+  return response.json()
+}
+
+// 表格数据
+const tableData = ref([])
+const loading = ref(false)
+
+// 分页
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  total: 0
+})
+
+// 筛选
+const filterForm = reactive({
+  keyword: '',
+  db_type: '',
+  category: ''
+})
+
+// 数据库类型和类别
+const dbTypes = ref([])
+const categories = ref([])
+
+// 对话框
+const dialogVisible = ref(false)
+const dialogTitle = ref('新增数据源')
+const submitting = ref(false)
+const testing = ref(false)
+const activeTab = ref('basic')
+const formRef = ref(null)
+
+// 表单数据
+const formData = reactive({
+  id: null,
+  name: '',
+  department: '',
+  system_name: '',
+  category: 'business',
+  db_type: '',
+  driver: '',
+  host: '',
+  port: 3306,
+  database_name: '',
+  username: '',
+  password: '',
+  collect_metadata: false,
+  status_check: false,
+  status: 'inactive',
+  description: ''
+})
+
+// 表单规则
+const formRules = computed(() => {
+  const rules = {
+    name: [{ required: true, message: '请输入数据源名称', trigger: 'blur' }],
+    db_type: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
+    database_name: [{ required: true, message: '请输入数据库路径', trigger: 'blur' }]
+  }
+
+  if (!isSqlite.value) {
+    rules.host = [{ required: true, message: '请输入 IP 地址或域名', trigger: 'blur' }]
+    rules.port = [{ required: true, message: '请输入端口号', trigger: 'blur' }]
+    rules.username = [{ required: true, message: '请输入用户名', trigger: 'blur' }]
+    rules.password = [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  }
+
+  return rules
+})
+
+// 获取数据库类型
+const loadDbTypes = async () => {
+  try {
+    const res = await apiRequest('GET', '/api/admin/datasources/types')
+    dbTypes.value = res.types || []
+  } catch (error) {
+    console.error('加载数据库类型失败', error)
+  }
+}
+
+// 获取类别
+const loadCategories = async () => {
+  try {
+    const res = await apiRequest('GET', '/api/admin/datasources/categories')
+    categories.value = res.categories || []
+  } catch (error) {
+    console.error('加载类别失败', error)
+  }
+}
+
+// 数据库类型变化
+const onDbTypeChange = (value) => {
+  const type = dbTypes.value.find(t => t.value === value)
+  if (type) {
+    formData.driver = type.driver
+    formData.port = type.default_port
+    if (value.toLowerCase() === 'sqlite') {
+      formData.host = ''
+      formData.port = 0
+      formData.username = ''
+      formData.password = ''
+      formData.database_name = ''
+    }
+  }
+}
+
+// 获取数据库类型标签
+const getDbTypeTag = (type) => {
+  const tags = {
+    mysql: 'success',
+    mysql8: 'success',
+    postgresql: 'primary',
+    oracle: 'warning',
+    sqlserver: 'danger',
+    sqlite: 'info',
+    mariadb: 'success'
+  }
+  return tags[type] || 'info'
+}
+
+// 预览数据源
+const previewDatasource = (row) => {
+  router.push(`/admin/datasources/${row.id}/preview`)
+}
+
+// 同步元数据
+const syncMetadata = async (row) => {
+  ElMessageBox.confirm(`确定要同步数据源"${row.name}"的元数据吗？这可能需要几分钟时间。`, '确认同步', {
+    type: 'warning',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消'
+  }).then(async () => {
+    try {
+      row.syncing = true
+      const token = localStorage.getItem('token')
+      
+      const res = await fetch(`/api/admin/datasources/${row.id}/sync-metadata`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      const data = await res.json()
+      
+      if (res.ok && data.success) {
+        ElMessage.success(data.message || '元数据同步完成')
+        loadData() // 刷新列表
+      } else {
+        ElMessage.error(data.detail || data.message || '同步失败')
+      }
+    } catch (error) {
+      ElMessage.error('同步失败：' + error.message)
+    } finally {
+      row.syncing = false
+    }
+  })
+}
+
+// 加载数据
+const loadData = async () => {
+  loading.value = true
+  try {
+    const params = new URLSearchParams()
+    params.append('page', pagination.page)
+    params.append('page_size', pagination.pageSize)
+    if (filterForm.keyword) params.append('keyword', filterForm.keyword)
+    if (filterForm.db_type) params.append('db_type', filterForm.db_type)
+    if (filterForm.category) params.append('category', filterForm.category)
+
+    const res = await apiRequest('GET', `/api/admin/datasources?${params}`)
+    tableData.value = res.items || []
+    pagination.total = res.total || 0
+  } catch (error) {
+    ElMessage.error('加载失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重置筛选
+const resetFilter = () => {
+  filterForm.keyword = ''
+  filterForm.db_type = ''
+  filterForm.category = ''
+  loadData()
+}
+
+// 显示新增对话框
+const showAddDialog = () => {
+  dialogTitle.value = '新增数据源'
+  dialogVisible.value = true
+}
+
+// 显示编辑对话框
+const showEditDialog = (row) => {
+  dialogTitle.value = '编辑数据源'
+  formData.id = row.id
+  formData.name = row.name
+  formData.department = row.department
+  formData.system_name = row.system_name
+  formData.category = row.category
+  formData.db_type = row.db_type
+  formData.driver = row.driver
+  formData.host = row.host
+  formData.port = row.port
+  formData.database_name = row.database_name
+  formData.username = row.username
+  formData.password = row.password
+  formData.collect_metadata = row.collect_metadata
+  formData.status_check = row.status_check
+  formData.status = row.status
+  formData.description = row.description
+  dialogVisible.value = true
+}
+
+// 重置对话框
+const resetDialog = () => {
+  formData.id = null
+  formData.name = ''
+  formData.department = ''
+  formData.system_name = ''
+  formData.category = 'business'
+  formData.db_type = ''
+  formData.driver = ''
+  formData.host = ''
+  formData.port = 3306
+  formData.database_name = ''
+  formData.username = ''
+  formData.password = ''
+  formData.collect_metadata = false
+  formData.status_check = false
+  formData.status = 'inactive'
+  formData.description = ''
+  formRef.value?.resetFields()
+}
+
+// 测试连接（表单）
+const testConnectionForm = async () => {
+  if (!formData.db_type) {
+    ElMessage.warning('请先选择数据源类型')
+    return
+  }
+
+  if (isSqlite.value) {
+    if (!formData.database_name) {
+      ElMessage.warning('请填写数据库文件路径')
+      return
+    }
+  } else {
+    if (!formData.host || !formData.port || !formData.database_name || !formData.username || !formData.password) {
+      ElMessage.warning('请先填写完整的连接信息')
+      return
+    }
+  }
+
+  testing.value = true
+  try {
+    const res = await apiRequest('POST', '/api/admin/datasources/test-connection', {
+      db_type: formData.db_type,
+      host: formData.host || '',
+      port: formData.port || 0,
+      database_name: formData.database_name,
+      username: formData.username || '',
+      password: formData.password || ''
+    })
+
+    if (res.success) {
+      ElMessage.success('连接测试成功！')
+    } else {
+      ElMessage.error('连接失败：' + res.message)
+    }
+  } catch (error) {
+    ElMessage.error('测试失败：' + error.message)
+  } finally {
+    testing.value = false
+  }
+}
+
+// 测试连接（列表）
+const testConnection = async (row) => {
+  try {
+    const res = await apiRequest('POST', '/api/admin/datasources/test-connection', {
+      db_type: row.db_type,
+      host: row.host,
+      port: row.port,
+      database_name: row.database_name,
+      username: row.username,
+      password: row.password
+    })
+
+    if (res.success) {
+      ElMessage.success('连接测试成功！')
+    } else {
+      ElMessage.error('连接失败：' + res.message)
+    }
+  } catch (error) {
+    ElMessage.error('测试失败：' + error.message)
+  }
+}
+
+// 提交表单
+const submitForm = async () => {
+  if (!formRef.value) return
+  
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    submitting.value = true
+    try {
+      const data = {
+        name: formData.name,
+        department: formData.department,
+        system_name: formData.system_name,
+        category: formData.category,
+        db_type: formData.db_type,
+        driver: formData.driver,
+        host: formData.host,
+        port: formData.port,
+        database_name: formData.database_name,
+        username: formData.username,
+        password: formData.password,
+        collect_metadata: formData.collect_metadata,
+        status_check: formData.status_check,
+        description: formData.description
+      }
+
+      if (formData.id) {
+        await apiRequest('PUT', `/api/admin/datasources/${formData.id}`, data)
+        ElMessage.success('更新成功')
+      } else {
+        await apiRequest('POST', '/api/admin/datasource/create', data)
+        ElMessage.success('创建成功')
+      }
+      
+      dialogVisible.value = false
+      loadData()
+    } catch (error) {
+      ElMessage.error('操作失败：' + error.message)
+    } finally {
+      submitting.value = false
+    }
+  })
+}
+
+// 切换状态
+const toggleStatus = async (row) => {
+  try {
+    await apiRequest('PUT', `/api/admin/datasources/${row.id}`, {
+      status: row.status === 'active' ? 'inactive' : 'active'
+    })
+    ElMessage.success('状态已更新')
+    loadData()
+  } catch (error) {
+    ElMessage.error('操作失败：' + error.message)
+  }
+}
+
+// 删除数据源
+const deleteDatasource = async (row) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除数据源 "${row.name}" 吗？`, '确认删除', {
+      type: 'warning'
+    })
+    await apiRequest('DELETE', `/api/admin/datasources/${row.id}`)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败：' + error.message)
+    }
+  }
+}
+
+onMounted(() => {
+  loadDbTypes()
+  loadCategories()
+  loadData()
+})
+</script>
+
+<style scoped>
+.datasource-page {
+  padding: 24px;
+  background-color: #f5f7fa;
+  min-height: 100%;
+}
+
+.header-card {
+  margin-bottom: 16px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.filter-card {
+  margin-bottom: 16px;
+}
+
+.filter-form {
+  margin-bottom: 0;
+}
+
+.table-card {
+  :deep(.el-card__body) {
+    padding: 20px;
+  }
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+</style>

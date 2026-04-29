@@ -1,0 +1,318 @@
+<template>
+  <div class="roles-page">
+    <el-card class="table-card">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">
+            <el-icon :size="18"><UserFilled /></el-icon>
+            角色管理
+          </span>
+          <el-button type="primary" @click="handleCreate">
+            <el-icon><Plus /></el-icon>
+            新增角色
+          </el-button>
+        </div>
+      </template>
+
+      <el-table :data="roles" v-loading="loading" border stripe>
+        <el-table-column prop="role_id" label="ID" width="80" />
+        <el-table-column prop="role_name" label="角色名称" width="150" />
+        <el-table-column prop="description" label="描述" />
+        <el-table-column prop="permission_count" label="权限数" width="100">
+          <template #default="{ row }">
+            <el-tag type="info">{{ row.permission_count }} 个权限</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="创建时间" width="160" />
+        <el-table-column label="操作" width="280" fixed="right" class-name="action-column">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button size="small" @click="handlePermissions(row)">权限配置</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 新增/编辑对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEdit ? '编辑角色' : '新增角色'"
+      width="500px"
+      @close="handleDialogClose"
+    >
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="80px">
+        <el-form-item label="角色名称" prop="role_name">
+          <el-input v-model="formData.role_name" placeholder="请输入角色名称" />
+        </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input
+            v-model="formData.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入角色描述"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 权限配置对话框 -->
+    <el-dialog
+      v-model="permissionDialogVisible"
+      title="权限配置"
+      width="600px"
+    >
+      <div class="permission-tree-container">
+        <el-tree
+          ref="treeRef"
+          :data="permissionTree"
+          :props="{ children: 'children', label: 'permission_name' }"
+          node-key="permission_id"
+          show-checkbox
+          :default-checked-keys="selectedPermissions"
+          :expand-on-click-node="false"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="permissionDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSavePermissions" :loading="submitting">保存</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, UserFilled } from '@element-plus/icons-vue'
+import api from '@/api'
+
+const loading = ref(false)
+const submitting = ref(false)
+const dialogVisible = ref(false)
+const permissionDialogVisible = ref(false)
+const isEdit = ref(false)
+const currentRoleId = ref(null)
+
+const roles = ref([])
+const permissionTree = ref([])
+const selectedPermissions = ref([])
+
+const formData = reactive({
+  role_name: '',
+  description: ''
+})
+
+const formRules = {
+  role_name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }]
+}
+
+const formRef = ref(null)
+const treeRef = ref(null)
+
+// API 请求封装
+const apiRequest = async (method, url, options = {}) => {
+  const token = localStorage.getItem('token')
+  const config = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    ...options
+  }
+
+  try {
+    const response = await fetch(url, config)
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(text || '请求失败')
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    throw error
+  }
+}
+
+// 加载角色列表
+const loadRoles = async () => {
+  loading.value = true
+  try {
+    const res = await apiRequest('get', '/api/admin/roles')
+    roles.value = res.items
+  } catch (error) {
+    ElMessage.error(error.message || '加载角色列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载权限树
+const loadPermissionTree = async () => {
+  try {
+    const res = await apiRequest('get', '/api/admin/permissions')
+    permissionTree.value = res
+  } catch (error) {
+    console.error('加载权限树失败', error)
+  }
+}
+
+// 加载角色权限
+const loadRolePermissions = async (roleId) => {
+  try {
+    const res = await apiRequest('get', `/api/admin/roles/${roleId}/permissions/tree`)
+    selectedPermissions.value = res.selected_ids
+    return res.permission_tree
+  } catch (error) {
+    console.error('加载角色权限失败', error)
+    return []
+  }
+}
+
+const handleCreate = () => {
+  isEdit.value = false
+  dialogVisible.value = true
+}
+
+const handleEdit = (row) => {
+  isEdit.value = true
+  currentRoleId.value = row.role_id
+  formData.role_name = row.role_name
+  formData.description = row.description || ''
+  dialogVisible.value = true
+}
+
+const handleDialogClose = () => {
+  formRef.value?.resetFields()
+  Object.assign(formData, {
+    role_name: '',
+    description: ''
+  })
+}
+
+const handleSubmit = async () => {
+  try {
+    await formRef.value.validate()
+    submitting.value = true
+
+    if (isEdit.value) {
+      await apiRequest('put', `/admin/roles/${currentRoleId.value}`, {
+        body: JSON.stringify(formData)
+      })
+      ElMessage.success('角色更新成功')
+    } else {
+      await apiRequest('post', '/api/admin/roles', {
+        body: JSON.stringify(formData)
+      })
+      ElMessage.success('角色创建成功')
+    }
+
+    dialogVisible.value = false
+    loadRoles()
+  } catch (error) {
+    if (error.message) {
+      ElMessage.error(error.message)
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+
+const handlePermissions = async (row) => {
+  currentRoleId.value = row.role_id
+  await loadPermissionTree()
+  await loadRolePermissions(row.role_id)
+  permissionDialogVisible.value = true
+}
+
+const handleSavePermissions = async () => {
+  try {
+    submitting.value = true
+    const checkedKeys = treeRef.value.getCheckedKeys()
+    const halfCheckedKeys = treeRef.value.getHalfCheckedKeys()
+
+    // 包含全选和半选的权限 ID
+    const allKeys = [...checkedKeys, ...halfCheckedKeys]
+
+    await apiRequest('put', `/admin/roles/${currentRoleId.value}/permissions`, {
+      body: JSON.stringify({ permission_ids: allKeys })
+    })
+
+    ElMessage.success('权限配置成功')
+    permissionDialogVisible.value = false
+    loadRoles()
+  } catch (error) {
+    if (error.message) {
+      ElMessage.error(error.message)
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除角色"${row.role_name}"吗？删除后该角色下的用户将无法分配角色`,
+      '警告',
+      { type: 'danger' }
+    )
+
+    await apiRequest('delete', `/admin/roles/${row.role_id}`)
+
+    ElMessage.success('角色删除成功')
+    loadRoles()
+  } catch (error) {
+    if (error.message && !error.message.includes('取消')) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
+onMounted(() => {
+  loadRoles()
+  loadPermissionTree()
+})
+</script>
+
+<style scoped>
+.roles-page {
+  padding: var(--spacing-6);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.permission-tree-container {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+:deep(.el-tree-node__label) {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+</style>

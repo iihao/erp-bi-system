@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据源管理 - 备用页面</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .card { background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .card-header { padding: 16px 24px; border-bottom: 1px solid #e4e7ed; display: flex; justify-content: space-between; align-items: center; }
+    .card-title { font-size: 18px; font-weight: 600; color: #303133; }
+    .card-body { padding: 24px; }
+    .btn { display: inline-block; padding: 8px 16px; font-size: 14px; border-radius: 4px; border: none; cursor: pointer; text-decoration: none; margin-right: 8px; }
+    .btn-primary { background: #409EFF; color: white; }
+    .btn-success { background: #67C23A; color: white; }
+    .btn-warning { background: #E6A23C; color: white; }
+    .btn-danger { background: #F56C6C; color: white; }
+    .btn:hover { opacity: 0.8; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #EBEEF5; }
+    th { background: #f5f7fa; color: #606266; font-weight: 600; }
+    tr:hover { background: #f5f7fa; }
+    .tag { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 4px; }
+    .tag-success { background: #f0f9eb; color: #67c23a; }
+    .tag-info { background: #f4f4f5; color: #909399; }
+    .tag-warning { background: #fdf6ec; color: #e6a23c; }
+    .tag-danger { background: #fef0f0; color: #f56c6c; }
+    .search-bar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+    .input { padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 14px; }
+    .notice { background: #ecf5ff; border: 1px solid #b3d8ff; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; color: #409EFF; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="notice">
+      <strong>💡 提示：</strong>这是数据源管理的备用页面（纯 HTML 版本），如果 Vue 页面显示异常，请使用此页面。
+      <a href="/login" style="margin-left: 20px; color: #409EFF;">返回登录页</a> | 
+      <a href="/admin/datasources" style="color: #409EFF;">尝试 Vue 版本</a>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">数据源管理</span>
+        <button class="btn btn-primary" onclick="alert('新增功能开发中')">+ 新增数据源</button>
+      </div>
+      <div class="card-body">
+        <div class="search-bar">
+          <input type="text" class="input" placeholder="搜索数据源..." style="width: 200px;">
+          <select class="input">
+            <option value="">全部类型</option>
+            <option value="mysql">MySQL</option>
+            <option value="postgresql">PostgreSQL</option>
+            <option value="oracle">Oracle</option>
+          </select>
+          <button class="btn btn-primary">查询</button>
+          <button class="btn">重置</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>数据源名称</th>
+              <th>业务部门</th>
+              <th>业务系统</th>
+              <th>类型</th>
+              <th>主机</th>
+              <th>数据库</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>ERP 生产数据库</td>
+              <td>信息技术部</td>
+              <td>ERP 系统</td>
+              <td><span class="tag tag-info">MySQL</span></td>
+              <td>192.168.1.100:3306</td>
+              <td>erp_production</td>
+              <td><span class="tag tag-success">已激活</span></td>
+              <td>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">预览</button>
+                <button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;">同步</button>
+                <button class="btn" style="padding: 4px 8px; font-size: 12px;">测试</button>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">编辑</button>
+                <button class="btn btn-warning" style="padding: 4px 8px; font-size: 12px;">禁用</button>
+                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">删除</button>
+              </td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>CRM 客户数据库</td>
+              <td>销售部</td>
+              <td>CRM 系统</td>
+              <td><span class="tag tag-info">PostgreSQL</span></td>
+              <td>192.168.1.101:5432</td>
+              <td>crm_customers</td>
+              <td><span class="tag tag-success">已激活</span></td>
+              <td>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">预览</button>
+                <button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;">同步</button>
+                <button class="btn" style="padding: 4px 8px; font-size: 12px;">测试</button>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">编辑</button>
+                <button class="btn btn-warning" style="padding: 4px 8px; font-size: 12px;">禁用</button>
+                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">删除</button>
+              </td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>财务数据库</td>
+              <td>财务部</td>
+              <td>财务系统</td>
+              <td><span class="tag tag-info">Oracle</span></td>
+              <td>192.168.1.102:1521</td>
+              <td>finance_db</td>
+              <td><span class="tag tag-info">未激活</span></td>
+              <td>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">预览</button>
+                <button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;">同步</button>
+                <button class="btn" style="padding: 4px 8px; font-size: 12px;">测试</button>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">编辑</button>
+                <button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;">启用</button>
+                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="text-align: center; color: #909399; font-size: 14px;">
+      <p>✅ 如果能看到这个页面，说明浏览器渲染正常</p>
+      <p>💡 此页面为纯 HTML 版本，不依赖 JavaScript 框架</p>
+      <p>📋 按钮功能开发中，目前仅用于测试页面渲染</p>
+    </div>
+  </div>
+
+  <script>
+    console.log('✅ 备用页面已加载 - 纯 HTML 版本')
+    console.log('如果按钮文字正常显示，说明不是浏览器问题')
+  </script>
+</body>
+</html>

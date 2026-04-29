@@ -1,0 +1,138 @@
+// 基于 ERP 的地产行业商业智能报表系统总体架构
+// 适用于学位论文，使用 Graphviz 生成高质量矢量图
+// 使用方法：dot -Tsvg 图 4-1-系统总体架构图.dot -o 图 4-1-系统总体架构图.svg
+
+digraph ArchitectureDiagram {
+    // 图形属性
+    rankdir=TB;
+    node [shape=box, style="filled,rounded", fontname="Times New Roman", fontsize=11, fillcolor="#f8f9fa", color="#495057", fontcolor="#212529"];
+    edge [fontname="Times New Roman", fontsize=10, color="#495057"];
+    graph [fontname="Times New Roman", fontsize=12, label="\n图 4-1 系统总体架构图", labelloc="b", labeljust="c", pad=20];
+
+    // 子图排序
+    ranksep=0.8;
+    nodesep=0.3;
+
+    // 外部用户角色
+    subgraph cluster_external {
+        rank=min;
+        label="外部角色";
+        style=dashed;
+        color="#6c757d";
+
+        User [label="业务用户/管理层", fillcolor="#e3f2fd", color="#1976d2"];
+        Admin [label="系统管理员", fillcolor="#e3f2fd", color="#1976d2"];
+    }
+
+    // 第 1 层 表现层
+    subgraph cluster_layer1 {
+        label="第 1 层 表现层 (Presentation Layer)";
+        style=filled;
+        fillcolor="#fff3e0";
+        color="#f57c00";
+
+        P1 [label="报表门户"];
+        P2 [label="AI 问数入口"];
+        A1 [label="配置管理后台"];
+        A2 [label="数据治理后台"];
+
+        {rank=same; P1; P2; A1; A2;}
+    }
+
+    // 第 2 层 应用服务层
+    subgraph cluster_layer2 {
+        label="第 2 层 应用服务层 (Application Service Layer)";
+        style=filled;
+        fillcolor="#e8f5e9";
+        color="#388e3c";
+
+        S1 [label="认证授权服务"];
+        S2 [label="报表服务"];
+        S3 [label="ETL 编排服务"];
+        S4 [label="AI 问数服务"];
+        S5 [label="日志审计服务"];
+
+        {rank=same; S1; S2; S3; S4; S5;}
+    }
+
+    // 第 3 层 智能引擎层
+    subgraph cluster_layer3 {
+        label="第 3 层 智能引擎层 (Intelligent Engine Layer)";
+        style=filled;
+        fillcolor="#fce4ec";
+        color="#c2185b";
+
+        G1 [label="关键词提取"];
+        G2 [label="标准 SQL 匹配"];
+        G3 [label="大模型 SQL 生成"];
+        G4 [label="安全校验"];
+        G5 [label="配额控制"];
+
+        {rank=same; G1; G2; G3; G4; G5;}
+    }
+
+    // 第 4 层 数据层
+    subgraph cluster_layer4 {
+        label="第 4 层 数据层 (Data Layer)";
+        style=filled;
+        fillcolor="#e3f2fd";
+        color="#1976d2";
+
+        D1 [label="业务主题数据"];
+        D2 [label="数据仓库\n(ODS/DWD/DWS/ADS)", shape=cylinder];
+        D3 [label="标准 SQL 库"];
+        D4 [label="问数日志库"];
+        D5 [label="权限知识库"];
+
+        {rank=same; D1; D2; D3; D4; D5;}
+    }
+
+    // 第 5 层 基础设施层
+    subgraph cluster_layer5 {
+        label="第 5 层 基础设施层 (Infrastructure Layer)";
+        style=filled;
+        fillcolor="#f5f5f5";
+        color="#616161";
+
+        I1 [label="任务调度"];
+        I2 [label="监控告警"];
+        I3 [label="服务部署"];
+        I4 [label="缓存与消息队列"];
+
+        {rank=same; I1; I2; I3; I4;}
+    }
+
+    // 用户连接
+    User -> P1 [style=solid];
+    User -> P2 [style=solid];
+    Admin -> A1 [style=solid];
+    Admin -> A2 [style=solid];
+
+    // 层级连接
+    P1 -> S2;
+    P2 -> S4;
+    A1 -> S1;
+    A2 -> S5;
+
+    // 应用服务层到智能引擎层
+    S4 -> G1 [dir=back, style=dashed];
+
+    // 智能引擎内部流程
+    G1 -> G2;
+    G2 -> G3;
+    G3 -> G4;
+    G4 -> S4;
+    G5 -> S4 [style=dashed];
+
+    // 数据层连接
+    D1 -> S2;
+    D2 -> S3;
+    D3 -> S4;
+    D4 -> S5 [dir=back];
+    D5 -> S1;
+
+    // 基础设施层连接
+    I1 -> S3 [style=dotted];
+    I2 -> S5 [style=dotted];
+    I3 -> {S1; S2; S3; S4} [style=dotted];
+}

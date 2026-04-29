@@ -1,0 +1,18 @@
+%%{init: {'flowchart': {'curve': 'stepAfter'}}}%%
+flowchart LR
+    A[问题输入] --> B[关键词提取]
+    B --> C[标准SQL召回]
+    C --> D{命中?}
+    D -- 是 --> E[更新usage_count]
+    D -- 否 --> F[构造提示词]
+    F --> G[httpx异步调用大模型]
+    G --> H[解析SQL文本]
+    H --> I[MySQL到SQLite兼容转换]
+    E --> J[SQL只读校验]
+    I --> J
+    J --> K{通过?}
+    K -- 否 --> L[拒绝执行]
+    K -- 是 --> M[执行查询]
+    M --> N[封装columns/rows/summary]
+    N --> O[前端渲染]
+    O --> P[记录ai_query_logs]

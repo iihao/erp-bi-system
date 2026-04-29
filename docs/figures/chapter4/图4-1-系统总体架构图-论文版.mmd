@@ -1,0 +1,96 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'Arial, sans-serif', 'fontSize': '14px', 'primaryColor': '#f0f7ff', 'primaryBorderColor': '#1890ff', 'primaryTextColor': '#333', 'lineColor': '#1890ff', 'tertiaryColor': '#fff' } } }%%
+flowchart TD
+    %% 表现层
+    subgraph Layer1["<b>表现层 Presentation Layer</b>"]
+        direction LR
+        P1["📊 报表门户"]
+        P2["🤖 AI 问数入口"]
+        A1["⚙️ 配置管理后台"]
+        A2["🔐 数据治理后台"]
+    end
+
+    %% 应用服务层
+    subgraph Layer2["<b>应用服务层 Application Service Layer</b>"]
+        direction LR
+        S1["认证授权服务"]
+        S2["报表服务"]
+        S3["ETL 编排服务"]
+        S4["AI 问数服务"]
+        S5["日志审计服务"]
+    end
+
+    %% 智能引擎层
+    subgraph Layer3["<b>智能引擎层 Intelligent Engine Layer</b>"]
+        direction LR
+        G1["关键词提取"]
+        G2["标准 SQL 匹配"]
+        G3["大模型 SQL 生成"]
+        G4["安全校验"]
+        G5["配额控制"]
+    end
+
+    %% 数据层
+    subgraph Layer4["<b>数据层 Data Layer</b>"]
+        direction LR
+        D1["业务主题数据"]
+        D2[("ODS<br/>DWD<br/>DWS<br/>ADS")]
+        D3["标准 SQL 库"]
+        D4["问数日志库"]
+        D5["权限知识库"]
+    end
+
+    %% 基础设施层
+    subgraph Layer5["<b>基础设施层 Infrastructure Layer</b>"]
+        direction LR
+        I1["任务调度"]
+        I2["监控告警"]
+        I3["服务部署"]
+        I4["缓存与消息队列"]
+    end
+
+    %% 用户角色
+    User["👤 业务用户/管理层"]
+    Admin["👨‍💼 系统管理员"]
+
+    %% 用户连接
+    User --> P1
+    User --> P2
+    Admin --> A1
+    Admin --> A2
+
+    %% 层间连接
+    Layer1 --> Layer2
+    Layer2 --> Layer3
+    Layer2 --> Layer4
+    Layer3 --> Layer4
+    Layer2 -.-> Layer5
+    Layer5 -.-> Layer2
+
+    %% 数据流向
+    D1 --> S2
+    D2 --> S3
+    D3 --> S4
+    D4 --> S5
+    D5 --> S1
+
+    %% AI 引擎内部流程
+    G1 --> G2
+    G2 --> G3
+    G3 --> G4
+    G4 --> S4
+    G5 -.-> S4
+
+    %% 样式定义
+    classDef userStyle fill:#e6f7ff,stroke:#1890ff,stroke-width:2px,color:#333
+    classDef layer1Style fill:#fff7e6,stroke:#fa8c16,stroke-width:2px,color:#333
+    classDef layer2Style fill:#f6ffed,stroke:#52c41a,stroke-width:2px,color:#333
+    classDef layer3Style fill:#fff0f6,stroke:#eb2f96,stroke-width:2px,color:#333
+    classDef layer4Style fill:#f0f5ff,stroke:#2f54eb,stroke-width:2px,color:#333
+    classDef layer5Style fill:#fafafa,stroke:#8c8c8c,stroke-width:2px,color:#333
+
+    class User,Admin userStyle
+    class Layer1 layer1Style
+    class Layer2 layer2Style
+    class Layer3 layer3Style
+    class Layer4 layer4Style
+    class Layer5 layer5Style

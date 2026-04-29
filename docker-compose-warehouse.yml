@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # MySQL 8.0 作为数据仓库
+  mysql-warehouse:
+    image: mysql:8.0
+    container_name: erp_bi_warehouse
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: erp_bi_warehouse
+      MYSQL_USER: erp_bi
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-erp_bi123}
+    ports:
+      - "3307:3306"  # 使用 3307 端口，避免与现有 MySQL 冲突
+    volumes:
+      - ./warehouse_data:/var/lib/mysql
+      - ./db/init_warehouse_tables.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+8:00
+    restart: unless-stopped
+    networks:
+      - erp_bi_network
+
+  # 现有 SQLite 数据库（业务系统）
+  # 注：SQLite 作为业务系统数据库继续使用
+  # 数仓使用 MySQL
+
+networks:
+  erp_bi_network:
+    driver: bridge
+
+volumes:
+  warehouse_data:

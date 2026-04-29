@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant U as 用户
+    participant F as 前端页面
+    participant API as AI问数API
+    participant G as 安全治理
+    participant L as 标准SQL库
+    participant M as 大模型服务
+    participant DB as 业务数据库
+    participant LOG as 日志库
+
+    U->>F: 输入自然语言问题
+    F->>API: /api/portal/ai-query/execute
+    API->>G: 配额与敏感校验
+    G-->>API: 校验通过
+    API->>L: 关键词匹配标准SQL
+    alt 命中
+      L-->>API: 返回标准SQL
+    else 未命中
+      API->>M: 调用模型生成SQL
+      M-->>API: 返回SQL
+    end
+    API->>G: 二次SQL安全校验
+    G-->>API: 允许执行
+    API->>DB: 执行查询
+    DB-->>API: 返回结果集
+    API->>LOG: 记录问数日志
+    API-->>F: SQL+数据+字段+耗时
+    F-->>U: 表格/图表/智能解读

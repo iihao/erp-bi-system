@@ -1,0 +1,61 @@
+# AI数据融合平台 Crontab 配置
+# 编辑方式：crontab -e
+
+# 环境变量
+SHELL=/bin/zsh
+PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin
+PYTHON=/Users/huangqiang/.openclaw/workspace/erp-bi-system/backend/venv/bin/python3
+PROJECT_DIR=/Users/huangqiang/.openclaw/workspace/erp-bi-system/backend
+
+# ============================================
+# ETL 调度（与 APScheduler 互补，作为备份）
+# ============================================
+
+# 每天 2:00 - ODS 层数据抽取
+0 2 * * * cd $PROJECT_DIR && $PYTHON -m etl.extractors.ods_extractor_simple >> logs/cron_etl.log 2>&1
+
+# 每天 3:00 - DWD 层数据清洗
+0 3 * * * cd $PROJECT_DIR && $PYTHON -m etl.transformers.dwd_cleaner >> logs/cron_etl.log 2>&1
+
+# 每天 4:00 - DWS 层数据聚合
+0 4 * * * cd $PROJECT_DIR && $PYTHON -m etl.transformers.dws_aggregator_simple >> logs/cron_etl.log 2>&1
+
+# 每天 5:00 - ADS 层报表生成
+0 5 * * * cd $PROJECT_DIR && $PYTHON -m etl.loaders.ads_loader_simple >> logs/cron_etl.log 2>&1
+
+# ============================================
+# 监控告警
+# ============================================
+
+# 每 30 分钟 - ETL 健康检查
+*/30 * * * * cd $PROJECT_DIR && $PYTHON monitor/etl_monitor.py >> logs/cron_monitor.log 2>&1
+
+# 每天 8:00 - 发送日报（如有问题）
+0 8 * * * cd $PROJECT_DIR && $PYTHON monitor/etl_monitor.py --daily-report >> logs/cron_monitor.log 2>&1
+
+# ============================================
+# 系统维护
+# ============================================
+
+# 每周日 3:00 - 清理过期日志（保留 30 天）
+0 3 * * 0 find $PROJECT_DIR/logs -name "*.log" -mtime +30 -delete
+
+# 每月 1 日 2:00 - 清理过期数据（可选）
+# 0 2 1 * * cd $PROJECT_DIR && $PYTHON scripts/cleanup_old_data.py >> logs/cron_maintenance.log 2>&1
+
+# ============================================
+# 备份
+# ============================================
+
+# 每天 6:00 - 备份数仓数据
+0 6 * * * mysqldump -h localhost -P 3306 -uroot -proot123 erp_bi_warehouse > /backup/erp_bi_warehouse_$(date +\%Y\%m\%d).sql 2>&1
+
+# ============================================
+# 服务检查
+# ============================================
+
+# 每 5 分钟 - 检查后端服务
+*/5 * * * * curl -sf http://localhost:8001/health > /dev/null || echo "后端服务异常" | mail -s "AI数据融合平台告警" admin@example.com
+
+# 每 5 分钟 - 检查前端服务
+*/5 * * * * curl -sf http://localhost:3000 > /dev/null || echo "前端服务异常" | mail -s "AI数据融合平台告警" admin@example.com

@@ -1,0 +1,406 @@
+/**
+ * AI数据融合平台动画效果
+ * 专业流畅的过渡动画
+ */
+
+/* ========================================
+   基础过渡
+   ======================================== */
+.transition-all {
+  transition: all var(--transition) var(--transition-cubic);
+}
+
+.transition-colors {
+  transition: color var(--transition) var(--transition-cubic),
+              background-color var(--transition) var(--transition-cubic),
+              border-color var(--transition) var(--transition-cubic);
+}
+
+.transition-transform {
+  transition: transform var(--transition) var(--transition-cubic);
+}
+
+.transition-shadow {
+  transition: box-shadow var(--transition) var(--transition-cubic);
+}
+
+.transition-opacity {
+  transition: opacity var(--transition) var(--transition-cubic);
+}
+
+/* ========================================
+   淡入动画
+   ======================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight var(--transition-slow) var(--transition-cubic);
+}
+
+/* ========================================
+   缩放动画
+   ======================================== */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--transition) var(--transition-cubic);
+}
+
+.animate-scale-out {
+  animation: scaleOut var(--transition) var(--transition-cubic);
+}
+
+/* ========================================
+   弹跳动画
+   ======================================== */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.6s var(--transition-cubic);
+}
+
+/* ========================================
+   旋转动画
+   ======================================== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ========================================
+   脉冲动画
+   ======================================== */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ========================================
+   滑动动画
+   ======================================== */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-slide-in-up {
+  animation: slideInUp var(--transition-slow) var(--transition-cubic);
+}
+
+.animate-slide-in-down {
+  animation: slideInDown var(--transition-slow) var(--transition-cubic);
+}
+
+/* ========================================
+   骨架屏加载动画
+   ======================================== */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(
+    to right,
+    var(--slate-200) 0%,
+    var(--slate-100) 20%,
+    var(--slate-200) 40%,
+    var(--slate-200) 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* ========================================
+   进度条动画
+   ======================================== */
+@keyframes progress {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}
+
+.animate-progress {
+  animation: progress 1s linear infinite;
+  background: linear-gradient(
+    -45deg,
+    var(--primary-500) 25%,
+    var(--primary-400) 25%,
+    var(--primary-400) 50%,
+    var(--primary-500) 50%,
+    var(--primary-500) 75%,
+    var(--primary-400) 75%,
+    var(--primary-500)
+  );
+  background-size: 40px 40px;
+}
+
+/* ========================================
+   摇晃动画 (错误提示)
+   ======================================== */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s var(--transition-cubic);
+}
+
+/* ========================================
+   缩放强调
+   ======================================== */
+@keyframes scaleUp {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.3s var(--transition-cubic);
+}
+
+/* ========================================
+   工具类
+   ======================================== */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+.duration-fast {
+  animation-duration: var(--transition-fast);
+}
+
+.duration-normal {
+  animation-duration: var(--transition);
+}
+
+.duration-slow {
+  animation-duration: var(--transition-slow);
+}
+
+/* 动画填充模式 */
+.fill-mode-forwards {
+  animation-fill-mode: forwards;
+}
+
+.fill-mode-backwards {
+  animation-fill-mode: backwards;
+}
+
+.fill-mode-both {
+  animation-fill-mode: both;
+}

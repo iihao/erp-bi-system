@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: erp-bi-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: erp_bi
+      MYSQL_USER: erp_bi_user
+      MYSQL_PASSWORD: erp_bi_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init_scripts/erp_init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - erp-bi-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: erp-bi-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - erp-bi-network
+    restart: unless-stopped
+
+  # Metabase BI
+  metabase:
+    image: metabase/metabase:v0.47.0
+    container_name: erp-bi-metabase
+    ports:
+      - "3001:3000"
+    environment:
+      MB_SITE_NAME: AI数据融合平台 Metabase
+      MB_SITE_URL: http://localhost:3001
+      MB_DB_TYPE: h2
+      MB_DB_FILE: /metabase-data/metabase
+      JAVA_TIMEZONE: Asia/Shanghai
+      MB_JAVA_TIMEZONE: Asia/Shanghai
+    volumes:
+      - metabase_data:/metabase-data
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - erp-bi-network
+    restart: unless-stopped
+
+networks:
+  erp-bi-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  metabase_data:

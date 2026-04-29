@@ -1,0 +1,37 @@
+flowchart TB
+    subgraph P[表现层]
+      P1[Admin 后台]
+      P2[Portal 前台]
+    end
+
+    subgraph S[应用服务层]
+      S1[认证与权限 API]
+      S2[数据与ETL API]
+      S3[报表与AI API]
+    end
+
+    subgraph A[智能引擎与安全治理层]
+      A1[关键词提取]
+      A2[标准SQL匹配]
+      A3[大模型SQL生成]
+      A4[安全校验与配额]
+    end
+
+    subgraph D[数据层]
+      D1[业务主题数据]
+      D2[standard_sql_library]
+      D3[ai_query_logs]
+      D4[users/roles/permissions]
+    end
+
+    subgraph I[基础设施层]
+      I1[任务调度]
+      I2[监控告警]
+      I3[部署运行环境]
+    end
+
+    P --> S
+    S --> A
+    A --> D
+    S --> D
+    S --> I

@@ -1,0 +1,58 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#4A90D9', 'primaryTextColor': '#fff', 'primaryBorderColor': '#2E5C8A', 'lineColor': '#4A90D9', 'secondaryColor': '#E8F1F8', 'tertiaryColor': '#f0f0f0'}}}%%
+graph TB
+    subgraph 用户层["🖥️ 用户层"]
+        A1[Vue3 前端<br/>仪表板/报表/AI 问数]
+        A2[Metabase BI<br/>自助分析]
+        A3[REST API<br/>外部调用]
+    end
+
+    subgraph 应用层["⚙️ 应用层 - FastAPI"]
+        B1[API 网关]
+        B2[认证服务]
+        B3[查询引擎]
+        B4[AI 问数服务<br/>百炼 Qwen3.5]
+        B5[报表服务]
+    end
+
+    subgraph 数据层["💾 数据层"]
+        C1[(MySQL<br/>业务数据库)]
+        C2[(Redis<br/>缓存)]
+
+        subgraph 数仓["📊 数据仓库"]
+            D1[(ODS 层<br/>原始数据 5 表)]
+            D2[(DWD 层<br/>清洗标准化 5 表)]
+            D3[(DWS 层<br/>轻度聚合 6 表)]
+            D4[(ADS 层<br/>报表指标 8 表)]
+        end
+    end
+
+    subgraph 外部服务["🌐 外部服务"]
+        E1[阿里云百炼<br/>Qwen3.5-Plus]
+        E2[Docker 容器]
+    end
+
+    A1 --> B1
+    A2 --> C1
+    A3 --> B1
+
+    B1 --> B2
+    B1 --> B3
+    B1 --> B5
+    B3 --> B4
+    B4 --> E1
+
+    B1 --> C1
+    B1 --> C2
+    B3 --> D4
+    B5 --> D4
+
+    C1 --> D1
+    D1 --> D2
+    D2 --> D3
+    D3 --> D4
+
+    style 用户层 fill:#E8F1F8,stroke:#4A90D9,stroke-width:2px
+    style 应用层 fill:#FFF4E6,stroke:#E67E22,stroke-width:2px
+    style 数据层 fill:#E8F8F5,stroke:#1ABC9C,stroke-width:2px
+    style 数仓 fill:#FEF9E7,stroke:#F39C12,stroke-width:2px
+    style 外部服务 fill:#F4ECF7,stroke:#9B59B6,stroke-width:2px

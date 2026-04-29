@@ -1,0 +1,32 @@
+{
+  "api_key": "sk-your-api-key-here",
+  "base_url": "https://coding.dashscope.aliyuncs.com/v1",
+  "model": "qwen3.6-plus",
+  "model_mode": "text",
+  "system_prompt": "你是一个专业的 SQL 生成助手。根据数据库表结构，将用户的自然语言问题转换为 SQL 查询。\n\n要求：\n1. 只输出 SQL 语句，不要解释\n2. 使用 MySQL 语法\n3. 如果问题不明确，生成最合理的查询\n4. 限制结果数量（使用 LIMIT）\n5. 只允许 SELECT 查询",
+  "user_prompt": "请将以下问题转换为 SQL 查询：{question}",
+  "daily_quota": 100,
+  "sensitive_words": "DROP, DELETE, TRUNCATE, GRANT, REVOKE",
+  "sensitive_tables": [
+    "users",
+    "roles",
+    "permissions",
+    "system_logs"
+  ],
+  "table_schemas": {
+    "products": {
+      "description": "产品信息表",
+      "fields": {
+        "product_id": {"description": "产品 ID", "type": "dimension"},
+        "product_name": {"description": "产品名称", "type": "dimension"},
+        "category": {"description": "产品分类", "type": "dimension"},
+        "price": {"description": "产品价格", "type": "measure"}
+      }
+    }
+  },
+  "available_models": [
+    {"id": "qwen3.6-plus", "name": "Qwen3.6-Plus", "modes": ["text", "deep"]},
+    {"id": "qwen3.5-plus", "name": "Qwen3.5-Plus", "modes": ["text", "vision"]}
+  ],
+  "allowed_types": ["query", "analysis", "report"]
+}

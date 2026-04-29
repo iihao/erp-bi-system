@@ -1,0 +1,33 @@
+flowchart TB
+    SRC[业务系统与外部文件] --> ODS[ODS操作数据层]
+    ODS --> DWD[DWD明细数据层]
+    DWD --> DWS[DWS服务数据层]
+    DWS --> ADS[ADS应用数据层]
+
+    subgraph L1[原始层]
+      ODS
+    end
+
+    subgraph L2[明细层]
+      DWD
+    end
+
+    subgraph L3[主题层]
+      DWS
+    end
+
+    subgraph L4[应用层]
+      ADS
+    end
+
+    ODS --- O1[原始保留]
+    DWD --- D1[标准化清洗]
+    DWS --- D2[主题聚合]
+    ADS --- D3[报表输出]
+
+    DWD --> M1[事实表]
+    DWD --> M2[维度表]
+    DWS --> M3[销售回款主题]
+    DWS --> M4[成本费用主题]
+    ADS --> M5[集团报表]
+    ADS --> M6[驾驶舱与问数底座]

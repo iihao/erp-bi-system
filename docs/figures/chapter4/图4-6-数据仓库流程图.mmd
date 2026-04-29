@@ -1,0 +1,16 @@
+%%{init: {'flowchart': {'curve': 'stepAfter'}}}%%
+flowchart LR
+    A[源系统数据] --> B[ODS原始入仓]
+    B --> C[清洗与标准化]
+    C --> D[构建DWD明细事实]
+    D --> E[维度建模与主题聚合]
+    E --> F[生成DWS主题宽表]
+    F --> G[输出ADS报表集]
+    G --> H[固定报表]
+    G --> I[AI问数标准SQL]
+    H --> J[经营分析]
+    I --> J
+    J --> K[反馈指标优化]
+    K --> L[更新口径与SQL库]
+    L --> C
+    L --> I

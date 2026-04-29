@@ -1,0 +1,81 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'Times New Roman, serif', 'fontSize': '12px', 'primaryColor': '#f8f9fa', 'primaryBorderColor': '#495057', 'primaryTextColor': '#212529', 'lineColor': '#495057', 'tertiaryColor': '#ffffff' } } }%%
+flowchart TD
+    %% 表现层
+    subgraph L1["第 1 层 表现层 (Presentation Layer)"]
+        direction LR
+        P1["报表门户"]
+        P2["AI 问数入口"]
+        A1["配置管理后台"]
+        A2["数据治理后台"]
+    end
+
+    %% 应用服务层
+    subgraph L2["第 2 层 应用服务层 (Application Service Layer)"]
+        direction LR
+        S1["认证授权服务"]
+        S2["报表服务"]
+        S3["ETL 编排服务"]
+        S4["AI 问数服务"]
+        S5["日志审计服务"]
+    end
+
+    %% 智能引擎层
+    subgraph L3["第 3 层 智能引擎层 (Intelligent Engine Layer)"]
+        direction LR
+        G1["关键词提取"]
+        G2["标准 SQL 匹配"]
+        G3["大模型 SQL 生成"]
+        G4["安全校验"]
+        G5["配额控制"]
+    end
+
+    %% 数据层
+    subgraph L4["第 4 层 数据层 (Data Layer)"]
+        direction LR
+        D1["业务主题数据"]
+        D2[("数据仓库<br/>(ODS/DWD/DWS/ADS)")]
+        D3["标准 SQL 库"]
+        D4["问数日志库"]
+        D5["权限知识库"]
+    end
+
+    %% 基础设施层
+    subgraph L5["第 5 层 基础设施层 (Infrastructure Layer)"]
+        direction LR
+        I1["任务调度"]
+        I2["监控告警"]
+        I3["服务部署"]
+        I4["缓存与消息队列"]
+    end
+
+    %% 外部角色
+    User["业务用户 / 管理层"]
+    Admin["系统管理员"]
+
+    %% 用户连接
+    User --> P1 & P2
+    Admin --> A1 & A2
+
+    %% 层级连接
+    L1 --> L2
+    L2 --> L3 & L4
+    L3 --> L4
+    L5 <-.-> L2
+
+    %% 数据服务连接
+    D1 --> S2
+    D2 --> S3
+    D3 --> S4
+    D4 --> S5
+    D5 --> S1
+
+    %% AI 引擎流程
+    G1 --> G2 --> G3 --> G4 --> S4
+    G5 -.-> S4
+
+    %% 样式 - 简洁学术风
+    classDef userStyle fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000
+    classDef layerStyle fill:#f8f9fa,stroke:#495057,stroke-width:1px,color:#212529
+
+    class User,Admin userStyle
+    class L1,L2,L3,L4,L5 layerStyle

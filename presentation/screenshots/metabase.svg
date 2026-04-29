@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <rect width="1000" height="600" fill="#f8f9fa"/>
+
+  <!-- Metabase Header -->
+  <rect width="1000" height="60" fill="#509ee3"/>
+  <text x="30" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">Metabase</text>
+  <text x="800" y="38" font-family="Arial, sans-serif" font-size="14" fill="white">数据仪表盘</text>
+
+  <!-- Sidebar -->
+  <rect x="0" y="60" width="180" height="540" fill="#2d3339"/>
+  <text x="20" y="95" font-family="Arial, sans-serif" font-size="12" fill="#bdc3c7">📊 仪表盘</text>
+  <text x="20" y="125" font-family="Arial, sans-serif" font-size="12" fill="#bdc3c7">📈 报表</text>
+  <text x="20" y="155" font-family="Arial, sans-serif" font-size="12" fill="#bdc3c7">❓ 提问</text>
+  <text x="20" y="185" font-family="Arial, sans-serif" font-size="12" fill="#bdc3c7">📁 集合</text>
+  <text x="20" y="215" font-family="Arial, sans-serif" font-size="12" fill="#bdc3c7">⚙️ 管理</text>
+
+  <!-- Main Content -->
+  <rect x="200" y="80" width="780" height="500" rx="5" fill="white" stroke="#dee2e6"/>
+
+  <!-- Dashboard Title -->
+  <text x="230" y="115" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#2c3e50">销售分析仪表板</text>
+  <rect x="700" y="100" width="100" height="30" rx="5" fill="#509ee3"/>
+  <text x="750" y="120" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">分享</text>
+  <rect x="820" y="100" width="100" height="30" rx="5" fill="#27ae60"/>
+  <text x="870" y="120" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">编辑</text>
+
+  <!-- Chart Placeholders -->
+  <rect x="230" y="140" width="350" height="200" rx="5" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="405" y="240" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#adb5bd">收入趋势图</text>
+
+  <rect x="600" y="140" width="350" height="200" rx="5" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="775" y="240" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#adb5bd">订单分布</text>
+
+  <rect x="230" y="360" width="720" height="200" rx="5" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="590" y="460" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#adb5bd">产品销售排行表</text>
+
+  <!-- Placeholder Text -->
+  <text x="500" y="570" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#adb5bd">
+    截图占位符 - 请访问 http://localhost:3001 获取实际 Metabase 截图
+  </text>
+</svg>
