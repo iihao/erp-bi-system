@@ -380,6 +380,12 @@ const routes = [
         name: 'PortalRealEstate',
         component: () => import('@/views/portal/RealEstateDashboard.vue'),
         meta: { title: '地产经营看板' }
+      },
+      {
+        path: 'ai-chat',
+        name: 'PortalAIChat',
+        component: () => import('@/views/AIChat.vue'),
+        meta: { title: 'AI 对话' }
       }
     ]
   },

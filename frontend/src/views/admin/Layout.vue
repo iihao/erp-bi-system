@@ -115,6 +115,7 @@
             <el-menu-item index="/admin/ai-query-simple">AI 问数（优化版）</el-menu-item>
             <el-menu-item index="/admin/ai-enhanced">智能问数</el-menu-item>
             <el-menu-item index="/admin/ai-report">AI 智能报表</el-menu-item>
+            <el-menu-item index="/portal/ai-chat">AI 对话（Chat）</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="monitor">
@@ -314,6 +315,7 @@ const defaultOpenMenus = computed(() => {
     '/admin/ai-query-simple': 'ai',
     '/admin/ai-enhanced': 'ai',
     '/admin/ai-report': 'ai',
+    '/portal/ai-chat': 'ai',
     '/admin/monitor/system': 'monitor',
     '/admin/monitor/logs': 'monitor',
     '/admin/monitor/ai-records': 'monitor',
@@ -349,6 +351,7 @@ const pageTitles = {
   '/admin/ai-query-simple': 'AI 问数（优化版）',
   '/admin/ai-enhanced': '智能问数',
   '/admin/ai-report': 'AI 智能报表',
+  '/portal/ai-chat': 'AI 对话',
   '/admin/monitor/system': '系统信息',
   '/admin/monitor/logs': '系统日志',
   '/admin/monitor/ai-records': '问数记录',

@@ -41,6 +41,11 @@
         <template #title>AI 问数</template>
       </el-menu-item>
 
+      <el-menu-item index="/portal/ai-chat">
+        <el-icon><ChatLineRound /></el-icon>
+        <template #title>AI 对话</template>
+      </el-menu-item>
+
       <el-menu-item index="/data">
         <el-icon><DataLine /></el-icon>
         <template #title>数据预览</template>

@@ -16,6 +16,7 @@ from api.reports import router as reports_router
 from api.ai_query import router as ai_query_router
 from api.ai_config import router as ai_config_router
 from api.ai_records import router as ai_records_router, router_portal as portal_ai_query_router, router_standard as standard_sql_router
+from api.ai_chat import router as ai_chat_router
 # 后台管理路由
 from api.users import router as users_router
 from api.roles import router as roles_router
@@ -236,6 +237,7 @@ app.include_router(dashboard_router)
 app.include_router(admin_dashboard_router)
 app.include_router(ai_config_router)
 app.include_router(ai_records_router)
+app.include_router(ai_chat_router)
 app.include_router(standard_sql_router)
 app.include_router(datasources_router)
 app.include_router(update_logs_router)

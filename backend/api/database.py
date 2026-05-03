@@ -307,6 +307,24 @@ if USE_SQLITE:
                     )
                 ''')
 
+            # 向量语义匹配表（用于 AI 问数语义缓存）
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS query_vectors (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query_text TEXT NOT NULL,
+                        query_vector TEXT NOT NULL,
+                        sql_result TEXT NOT NULL,
+                        explanation TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+            # SQLite 不支持 INDEX 语法，需要单独处理
+            try:
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_qv_created ON query_vectors(created_at)')
+            except Exception:
+                pass
+
             # 插入默认数据
             cursor.execute("SELECT COUNT(*) FROM roles")
             if cursor.fetchone()[0] == 0:

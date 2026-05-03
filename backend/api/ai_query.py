@@ -24,6 +24,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 
+from api.ai_query_vector import vector_store, embed_text, normalize_question as normalize_for_vector
+
 load_dotenv()
 
 logging.basicConfig(
@@ -49,6 +51,11 @@ async def init_caches():
         logger.info("✅ 标准 SQL 缓存已预加载")
     except Exception as e:
         logger.warning(f"⚠️ 标准 SQL 预加载失败：{e}")
+
+    try:
+        await vector_store.sync(bailian_client.api_key, bailian_client.base_url)
+    except Exception as e:
+        logger.warning(f"⚠️ 向量索引同步失败：{e}")
 
 
 class QueryRequest(BaseModel):
@@ -196,7 +203,12 @@ class BaiLianClient:
         self.reload_config()
 
     def reload_config(self):
-        """重新加载 AI 配置，避免配置修改后需要重启服务"""
+        """重新加载 AI 配置，避免配置修改后需要重启服务。
+
+        优先级：.env 环境变量 > ai_config.json
+        .env 作为 secrets 的唯一来源，避免 ai_config.json 中的旧配置覆盖新值。
+        """
+        # 先加载 json 配置作为 fallback
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
@@ -205,18 +217,20 @@ class BaiLianClient:
             logger.warning(f"无法加载 ai_config.json: {e}，将使用环境变量配置")
             self.config = {}
 
-        self.api_key = self.config.get('api_key') or os.getenv('DASHSCOPE_API_KEY')
+        # .env 优先，ai_config.json 作为 fallback
+        self.api_key = os.getenv('DASHSCOPE_API_KEY') or self.config.get('api_key')
         if not self.api_key or self.api_key == 'your-api-key-here':
             logger.error("❌ DASHSCOPE_API_KEY 未配置")
         else:
             logger.info(f"✅ API Key 已配置：{self.api_key[:15]}...")
 
+        env_base_url = os.getenv('DASHSCOPE_BASE_URL')
         self.base_url = _resolve_base_url(
-            self.config.get('base_url') or os.getenv('DASHSCOPE_BASE_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
+            env_base_url or self.config.get('base_url') or 'https://dashscope.aliyuncs.com/compatible-mode/v1',
             self.api_key
         )
-        self.model = self.config.get('model') or os.getenv('DASHSCOPE_MODEL', 'qwen3.6-plus')
-        self.model_mode = self.config.get('model_mode') or os.getenv('DASHSCOPE_MODEL_MODE', 'text')
+        self.model = os.getenv('DASHSCOPE_MODEL') or self.config.get('model') or 'qwen3.6-plus'
+        self.model_mode = os.getenv('DASHSCOPE_MODEL_MODE') or self.config.get('model_mode') or 'text'
         logger.info(f"🤖 使用模型：{self.model} / mode={self.model_mode} @ {self.base_url}")
 
     async def _get_client(self):
@@ -227,7 +241,7 @@ class BaiLianClient:
             # 优化：超时 30s，启用连接复用
             limits = httpx.Limits(max_connections=10, max_keepalive_connections=5)
             _http_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(connect=5.0, read=30.0, write=5.0, pool=5.0),
+                timeout=httpx.Timeout(connect=5.0, read=120.0, write=10.0, pool=5.0),
                 limits=limits
             )
         return _http_client
@@ -999,16 +1013,40 @@ async def execute_query(request: QueryRequest):
             explanation = standard_match['explanation']
             logger.info(f"✅ 使用标准 SQL: {sql[:80]}")
         else:
-            match_source = "AI 在线生成"
-            # 5. 调用 AI 生成 SQL
-            schema = get_schema_context()
-            sql, explanation, input_tokens, output_tokens, total_tokens = await bailian_client.generate_sql(
-                question=request.question,
-                schema_context=schema
-            )
-            tokens_used = total_tokens
+            # 5. 向量语义匹配（新增，~200ms）
+            try:
+                question_vec = await embed_text(
+                    normalize_for_vector(request.question),
+                    bailian_client.api_key,
+                    bailian_client.base_url
+                )
+                vector_match = await vector_store.search_with_embedding(request.question, question_vec)
+            except Exception as e:
+                logger.warning(f"⚠️ 向量匹配跳过：{e}")
+                vector_match = None
 
-        # 6. 执行查询
+            if vector_match:
+                match_source = f"向量匹配({vector_match['score']})"
+                sql = vector_match['sql']
+                explanation = vector_match['explanation']
+                logger.info(f"🧠 向量语义匹配命中: score={vector_match['score']}, query={vector_match.get('match_query', '')[:40]}")
+            else:
+                match_source = "AI 在线生成"
+                # 6. 调用 AI 生成 SQL
+                schema = get_schema_context()
+                sql, explanation, input_tokens, output_tokens, total_tokens = await bailian_client.generate_sql(
+                    question=request.question,
+                    schema_context=schema
+                )
+                tokens_used = total_tokens
+
+                # 保存到向量库，供后续复用
+                try:
+                    await vector_store.save(request.question, sql, explanation, bailian_client.api_key, bailian_client.base_url)
+                except Exception as e:
+                    logger.warning(f"⚠️ 向量保存失败：{e}")
+
+        # 7. 执行查询
         db_path = os.getenv('SQLITE_DB_PATH', os.path.join(os.path.dirname(__file__), "..", "db", "erp_bi.db"))
         import sqlite3
         conn = sqlite3.connect(db_path)
@@ -1033,6 +1071,8 @@ async def execute_query(request: QueryRequest):
         trimmed_data = data[:request.top_k]
         chart_type = recommend_chart(columns, trimmed_data)
         thinking = build_thinking_detail(keywords, request.question, standard_match if matched_standard else None, sql, columns, trimmed_data)
+        # 更新匹配来源（支持向量匹配）
+        thinking["match_source"] = match_source
 
         # 8. 写入缓存
         response_data = {
@@ -1101,12 +1141,36 @@ async def generate_sql(request: QueryRequest):
             sql = standard_match['standard_sql']
             explanation = standard_match['explanation']
         else:
-            match_source = "AI 在线生成"
-            schema = get_schema_context()
-            sql, explanation, input_tokens, output_tokens, total_tokens = await bailian_client.generate_sql(
-                question=request.question, schema_context=schema
-            )
-            tokens_used = total_tokens
+            # 向量语义匹配
+            try:
+                question_vec = await embed_text(
+                    normalize_for_vector(request.question),
+                    bailian_client.api_key,
+                    bailian_client.base_url
+                )
+                vector_match = await vector_store.search_with_embedding(request.question, question_vec)
+            except Exception as e:
+                logger.warning(f"⚠️ 向量匹配跳过：{e}")
+                vector_match = None
+
+            if vector_match:
+                match_source = f"向量匹配({vector_match['score']})"
+                sql = vector_match['sql']
+                explanation = vector_match['explanation']
+                logger.info(f"🧠 [generate-sql] 向量匹配命中: score={vector_match['score']}")
+            else:
+                match_source = "AI 在线生成"
+                schema = get_schema_context()
+                sql, explanation, input_tokens, output_tokens, total_tokens = await bailian_client.generate_sql(
+                    question=request.question, schema_context=schema
+                )
+                tokens_used = total_tokens
+
+                # 保存到向量库
+                try:
+                    await vector_store.save(request.question, sql, explanation, bailian_client.api_key, bailian_client.base_url)
+                except Exception as e:
+                    logger.warning(f"⚠️ 向量保存失败：{e}")
 
         execution_time_ms = int((time.time() - start_time) * 1000)
 
@@ -1114,7 +1178,7 @@ async def generate_sql(request: QueryRequest):
         thinking = {
             "keywords": keywords,
             "matched_standard": matched_standard,
-            "match_source": "标准库命中" if matched_standard else "AI 在线生成",
+            "match_source": match_source,
             "matched_template": standard_match.get('question_template', '') if standard_match else None,
             "recommended_tables": _extract_tables_from_sql(standard_match.get('standard_sql', '') if standard_match else sql),
         }
@@ -1180,11 +1244,13 @@ async def get_schema():
 
 @router.post("/cache/clear")
 async def clear_cache():
-    """清除查询缓存"""
+    """清除查询缓存和向量索引"""
     get_query_cache().clear()
     refresh_schema_cache()
     load_standard_sql_cache()
-    return {"message": "缓存已清除"}
+    vector_store._vector_cache = []
+    vector_store.enabled = False
+    return {"message": "缓存已清除，向量索引已清空"}
 
 
 @router.get("/cache/stats")
@@ -1195,8 +1261,24 @@ async def cache_stats():
         "query_cache_size": len(cache._cache),
         "query_cache_max": cache._maxsize,
         "schema_cached": _schema_cache is not None,
-        "standard_sql_cached": len(_standard_sql_cache) if _standard_sql_cache else 0
+        "standard_sql_cached": len(_standard_sql_cache) if _standard_sql_cache else 0,
+        "vector_store": vector_store.get_stats()
     }
+
+
+@router.post("/vector/sync")
+async def sync_vectors():
+    """手动触发向量索引同步"""
+    await vector_store.sync(bailian_client.api_key, bailian_client.base_url)
+    return vector_store.get_stats()
+
+
+@router.delete("/vector/clear")
+async def clear_vectors():
+    """清空向量索引缓存（不删除数据库数据）"""
+    vector_store._vector_cache = []
+    vector_store.enabled = False
+    return {"message": "向量缓存已清空"}
 
 
 # ==========================================

@@ -9,6 +9,10 @@ export const sharedServerConfig = {
     '/ai-query': {
       target: 'http://localhost:8000',
       changeOrigin: true
+    },
+    '/ai-chat': {
+      target: 'http://localhost:8000',
+      changeOrigin: true
     }
   }
 }

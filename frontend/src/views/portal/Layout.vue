@@ -87,6 +87,14 @@
             </svg>
             <span v-if="!isCollapse">AI 智能报表</span>
           </router-link>
+          <router-link to="/portal/ai-chat" class="nav-item" exact-active-class="active">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              <line x1="9" y1="10" x2="15" y2="10"/>
+              <line x1="12" y1="7" x2="12" y2="13"/>
+            </svg>
+            <span v-if="!isCollapse">AI 对话</span>
+          </router-link>
         </div>
 
         <div class="nav-section" v-if="analysisReports.length > 0">
@@ -533,7 +541,7 @@ onUnmounted(() => {
   justify-content: center;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: rgba(226, 232, 240, 0.7);
   cursor: pointer;
   transition: all var(--transition) var(--transition-cubic);
@@ -543,12 +551,11 @@ onUnmounted(() => {
   background: rgba(59, 130, 246, 0.18);
   color: #ffffff;
   border-color: rgba(191, 219, 254, 0.3);
-  transform: translateY(-2px);
 }
 
 .quick-access-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 /* 侧边栏底部 */
