@@ -47,6 +47,7 @@ class ChatRequest(BaseModel):
 class ConversationInfo(BaseModel):
     id: str
     title: str
+    type: str = "chat"
     created_at: str
     updated_at: str
     message_count: int
@@ -56,7 +57,7 @@ class ConversationInfo(BaseModel):
 # 对话管理
 # ============================================
 
-def create_conversation(title: str = "新对话") -> str:
+def create_conversation(title: str = "新对话", conv_type: str = "chat") -> str:
     """创建新对话"""
     conv_id = str(uuid.uuid4())
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -64,10 +65,10 @@ def create_conversation(title: str = "新对话") -> str:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT INTO ai_conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
-                (conv_id, title, now, now)
+                "INSERT INTO ai_conversations (id, title, type, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (conv_id, title, conv_type, now, now)
             )
-        logger.info(f"✅ 创建新对话: {conv_id[:8]}...")
+        logger.info(f"✅ 创建新对话: {conv_id[:8]}... (type={conv_type})")
     except Exception as e:
         logger.warning(f"⚠️ 数据库创建对话失败，使用内存模式: {e}")
     return conv_id
@@ -107,22 +108,31 @@ def get_conversation_history(conv_id: str) -> List[Dict[str, Any]]:
         return []
 
 
-def list_conversations(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-    """获取对话列表"""
+def list_conversations(limit: int = 50, offset: int = 0, conv_type: str = None) -> List[Dict[str, Any]]:
+    """获取对话列表，可按类型过滤"""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """SELECT id, title, created_at, updated_at,
-                   (SELECT COUNT(*) FROM ai_chat_messages WHERE conversation_id = ai_conversations.id) as message_count
-                   FROM ai_conversations ORDER BY updated_at DESC LIMIT ? OFFSET ?""",
-                (limit, offset)
-            )
+            if conv_type:
+                cursor.execute(
+                    """SELECT id, title, type, created_at, updated_at,
+                       (SELECT COUNT(*) FROM ai_chat_messages WHERE conversation_id = ai_conversations.id) as message_count
+                       FROM ai_conversations WHERE type = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?""",
+                    (conv_type, limit, offset)
+                )
+            else:
+                cursor.execute(
+                    """SELECT id, title, type, created_at, updated_at,
+                       (SELECT COUNT(*) FROM ai_chat_messages WHERE conversation_id = ai_conversations.id) as message_count
+                       FROM ai_conversations ORDER BY updated_at DESC LIMIT ? OFFSET ?""",
+                    (limit, offset)
+                )
             rows = cursor.fetchall()
             return [
                 {
                     "id": r["id"],
                     "title": r["title"],
+                    "type": r["type"],
                     "created_at": r["created_at"],
                     "updated_at": r["updated_at"],
                     "message_count": r["message_count"],
@@ -268,22 +278,47 @@ async def chat_stream(request: ChatRequest):
 # ============================================
 
 @router.get("/conversations")
-async def get_conversations(limit: int = 50, offset: int = 0):
-    """获取对话列表"""
-    conversations = list_conversations(limit, offset)
+async def get_conversations(limit: int = 50, offset: int = 0, type: str = None):
+    """获取对话列表，支持按类型过滤"""
+    conversations = list_conversations(limit, offset, conv_type=type)
     return {"data": conversations, "total": len(conversations)}
 
 
 @router.get("/conversations/{conv_id}")
-async def get_conversation(conv_id: str):
-    """获取对话详情"""
+async def get_conversation(conv_id: str, type: str = None):
+    """获取对话详情，可选验证类型"""
+    # 如果指定了type，先验证对话类型是否匹配
+    if type:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT type FROM ai_conversations WHERE id = ?", (conv_id,))
+                row = cursor.fetchone()
+                if row and row["type"] != type:
+                    raise HTTPException(status_code=403, detail="对话类型不匹配")
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # 数据库查询失败时不阻塞
     history = get_conversation_history(conv_id)
     return {"id": conv_id, "messages": history}
 
 
 @router.put("/conversations/{conv_id}/title")
-async def update_title(conv_id: str, request: dict):
-    """更新对话标题"""
+async def update_title(conv_id: str, request: dict, type: str = None):
+    """更新对话标题，可选验证类型"""
+    if type:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT type FROM ai_conversations WHERE id = ?", (conv_id,))
+                row = cursor.fetchone()
+                if row and row["type"] != type:
+                    raise HTTPException(status_code=403, detail="对话类型不匹配")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
     title = request.get("title", "")
     if not title:
         raise HTTPException(status_code=400, detail="标题不能为空")
@@ -292,17 +327,52 @@ async def update_title(conv_id: str, request: dict):
 
 
 @router.delete("/conversations/{conv_id}")
-async def delete_conv(conv_id: str):
-    """删除对话"""
+async def delete_conv(conv_id: str, type: str = None):
+    """删除对话，可选验证类型"""
+    if type:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT type FROM ai_conversations WHERE id = ?", (conv_id,))
+                row = cursor.fetchone()
+                if row and row["type"] != type:
+                    raise HTTPException(status_code=403, detail="对话类型不匹配")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
     delete_conversation(conv_id)
     return {"message": "对话已删除"}
 
 
 @router.post("/conversations/new")
-async def create_new_conv():
-    """创建新对话"""
-    conv_id = create_conversation()
-    return {"id": conv_id, "title": "新对话"}
+async def create_new_conv(type: str = "chat"):
+    """创建新对话，指定类型"""
+    conv_id = create_conversation(conv_type=type)
+    return {"id": conv_id, "title": "新对话", "type": type}
+
+
+@router.post("/conversations/{conv_id}/messages")
+async def save_message_to_conv(conv_id: str, request: dict, type: str = None):
+    """保存单条消息到指定对话，可选验证类型"""
+    if type:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT type FROM ai_conversations WHERE id = ?", (conv_id,))
+                row = cursor.fetchone()
+                if row and row["type"] != type:
+                    raise HTTPException(status_code=403, detail="对话类型不匹配")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+    role = request.get("role", "")
+    content = request.get("content", "")
+    if not role or not content:
+        raise HTTPException(status_code=400, detail="role 和 content 不能为空")
+    save_message(conv_id, role, content)
+    return {"message": "消息已保存"}
 
 
 # ============================================
@@ -320,10 +390,18 @@ def init_ai_chat_tables():
                 CREATE TABLE IF NOT EXISTS ai_conversations (
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
+                    type TEXT NOT NULL DEFAULT 'chat',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+
+            # 为已存在的表添加 type 列（如果不存在）
+            try:
+                cursor.execute("ALTER TABLE ai_conversations ADD COLUMN type TEXT NOT NULL DEFAULT 'chat'")
+                logger.info("✅ 为 ai_conversations 添加了 type 列")
+            except Exception:
+                pass  # 列已存在
 
             # 消息表
             cursor.execute('''
@@ -338,6 +416,7 @@ def init_ai_chat_tables():
                 )
             ''')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_msg_conv ON ai_chat_messages(conversation_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_conv_type ON ai_conversations(type, updated_at)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_conv_updated ON ai_conversations(updated_at)')
 
             logger.info("✅ AI 对话表初始化完成")

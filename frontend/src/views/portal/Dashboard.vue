@@ -72,7 +72,7 @@
 
     <el-row :gutter="20" class="chart-row">
       <!-- 项目销售排行图 -->
-      <el-col :xs="24" :lg="12">
+      <el-col :xs="24">
         <el-card class="chart-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -80,58 +80,6 @@
             </div>
           </template>
           <div v-loading="chartLoading.ranking" ref="rankingChartRef" class="chart" style="height: 320px"></div>
-        </el-card>
-      </el-col>
-
-      <!-- 快捷入口 -->
-      <el-col :xs="24" :lg="12">
-        <el-card class="quick-links-card" shadow="hover">
-          <template #header>
-            <span class="card-title">快捷入口</span>
-          </template>
-          <div class="quick-links-container">
-            <div class="quick-link-item" @click="navigateTo('/portal/reports')">
-              <div class="link-icon-wrapper blue">
-                <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                  <polyline points="14,2 14,8 20,8"/>
-                </svg>
-              </div>
-              <h3>全部报表</h3>
-              <p>查看您可访问的所有报表</p>
-            </div>
-            <div class="quick-link-item" @click="navigateTo('/portal/realestate')">
-              <div class="link-icon-wrapper green">
-                <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M18 17V9" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M13 17V5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M8 17v-3" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <h3>地产看板</h3>
-              <p>项目、房源、签约、回款全景</p>
-            </div>
-            <div class="quick-link-item" @click="navigateTo('/portal/ai-query')">
-              <div class="link-icon-wrapper orange">
-                <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-                </svg>
-              </div>
-              <h3>AI 问数</h3>
-              <p>快速提问地产经营数据</p>
-            </div>
-            <div class="quick-link-item" @click="navigateTo('/portal/report-portal')">
-              <div class="link-icon-wrapper blue">
-                <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 21h18M5 21V7l8-4 8 4v14"/>
-                  <path d="M9 14h6"/>
-                </svg>
-              </div>
-              <h3>报表中心</h3>
-              <p>浏览已发布的经营报表</p>
-            </div>
-          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -150,12 +98,10 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { Tickets, House, Coin, Wallet, Money, DataAnalysis, Document, TrendCharts, HomeFilled } from '@element-plus/icons-vue'
 
-const router = useRouter()
 const loading = ref(false)
 
 // 图表实例
@@ -559,11 +505,6 @@ const formatKpiValue = (value, unit) => {
   return numValue.toFixed(0)
 }
 
-// 导航
-const navigateTo = (path) => {
-  router.push(path)
-}
-
 // 刷新数据
 const refreshData = async () => {
   await loadOverview()
@@ -783,98 +724,6 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-.quick-links-card {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 18px;
-  height: 100%;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.94);
-}
-
-.quick-links-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.quick-links-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 12px;
-}
-
-.quick-link-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px 16px;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  min-height: 130px;
-}
-
-.quick-link-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.12);
-  border-color: rgba(37, 99, 235, 0.25);
-  background: #fff;
-}
-
-.link-icon-wrapper {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  transition: all 0.3s;
-}
-
-.link-icon-wrapper.blue {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-}
-
-.link-icon-wrapper.green {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.link-icon-wrapper.orange {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.quick-link-item:hover .link-icon-wrapper {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.link-icon {
-  width: 22px;
-  height: 22px;
-  color: #ffffff;
-}
-
-.quick-link-item h3 {
-  font-size: 14px;
-  color: #1e293b;
-  margin: 0 0 6px 0;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.quick-link-item p {
-  font-size: 11px;
-  color: #64748b;
-  margin: 0;
-  text-align: center;
-  line-height: 1.3;
-}
-
 .refresh-action {
   display: flex;
   justify-content: center;
@@ -891,12 +740,6 @@ onBeforeUnmount(() => {
 }
 
 /* 响应式 */
-@media (max-width: 900px) {
-  .quick-links-container {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 600px) {
   .quick-links-container {
     grid-template-columns: 1fr;

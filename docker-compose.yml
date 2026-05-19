@@ -11,7 +11,7 @@ services:
       MYSQL_USER: erp_bi_user
       MYSQL_PASSWORD: erp_bi_pass
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init_scripts/erp_init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -50,6 +50,7 @@ services:
       MB_DB_FILE: /metabase-data/metabase
       JAVA_TIMEZONE: Asia/Shanghai
       MB_JAVA_TIMEZONE: Asia/Shanghai
+      JAVA_OPTS: "-XX:-TieredCompilation -Xmx512m"
     volumes:
       - metabase_data:/metabase-data
     depends_on:

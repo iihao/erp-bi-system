@@ -1,598 +1,285 @@
 <template>
-  <div class="ai-query-page">
-    <el-card class="query-card">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon :size="22" class="header-icon"><ChatDotRound /></el-icon>
-            <span class="title">AI 智能问数</span>
-            <el-tag type="success" size="small">自然语言查询</el-tag>
-          </div>
-          <el-tag type="info" effect="plain" round>Qwen3.5-Plus</el-tag>
+  <div class="ai-query-fullscreen" :class="{ dark: isDark }">
+    <!-- 主区域 -->
+    <main class="chat-main">
+      <!-- 头部 -->
+      <header class="chat-header">
+        <div class="header-left">
+          <span class="source-badge">
+            <el-tag :type="sourceTagType" effect="plain" size="small">{{ sourceLabel }}</el-tag>
+          </span>
         </div>
-      </template>
-
-      <!-- 查询输入区 -->
-      <div class="query-section">
-        <el-input
-          v-model="question"
-          type="textarea"
-          :rows="2"
-          placeholder="例如：上个月签约回款趋势"
-          @keyup.enter.ctrl="handleQuery"
-          class="question-input"
-        />
-        <div class="query-actions">
-          <el-button type="primary" @click="handleQuery" :loading="loading" size="large" round class="query-btn">
-            <el-icon><Search /></el-icon>
-            智能查询
+        <div class="header-right">
+          <el-button text size="small" @click="newConversation" class="new-btn">
+            <el-icon><Plus /></el-icon>
+            新对话
+          </el-button>
+          <el-button text size="small" @click="toggleTheme" class="theme-btn" :title="isDark ? '切换亮色' : '切换暗色'">
+            <el-icon><Sunny v-if="isDark" /><Moon v-else /></el-icon>
+          </el-button>
+          <el-button text size="small" @click="clearCurrentChat">
+            <el-icon><Delete /></el-icon>
+            清空
           </el-button>
         </div>
-      </div>
+      </header>
 
-      <!-- 快捷问题 -->
-      <div class="quick-section">
-        <div class="quick-label">
-          <el-icon><Lightning /></el-icon>
-          <span>热门问题</span>
-        </div>
-        <div class="quick-grid">
-          <el-tag
-            v-for="q in quickQuestions"
-            :key="q"
-            @click="question = q"
-            class="question-tag"
-            effect="plain"
-            round
-          >
-            {{ q }}
-          </el-tag>
-        </div>
-      </div>
-
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-state">
-        <el-skeleton :rows="5" animated />
-      </div>
-
-      <!-- 查询结果 -->
-      <div v-else-if="result" class="result-section">
-        <!-- 智能解读 -->
-        <div v-if="result.insight" class="insight-card">
-          <div class="section-header">
-            <span>
-              <el-icon><Lightning /></el-icon>
-              结论摘要
-            </span>
-            <el-tag type="success" effect="plain">{{ result.sourceLabel }}</el-tag>
+      <!-- 消息区域 -->
+      <div class="messages-container" ref="messagesContainerRef">
+        <!-- 欢迎屏幕 -->
+        <div v-if="messages.length === 0 && !loading" class="welcome-screen">
+          <div class="welcome-icon">
+            <el-icon :size="48" color="var(--accent)"><ChatDotRound /></el-icon>
           </div>
-          <div class="insight-content">
-            <p>{{ result.insight }}</p>
-            <div v-if="result.profile?.highlights?.length" class="insight-bullets">
-              <div v-for="(item, index) in result.profile.highlights" :key="index" class="insight-bullet">
-                <span class="insight-bullet-dot"></span>
-                <span>{{ item }}</span>
-              </div>
-            </div>
-            <div v-if="result.profile?.recommendedTables?.length" class="thinking-tags">
-              <el-tag
-                v-for="table in result.profile.recommendedTables"
-                :key="table"
-                size="small"
-                effect="plain"
-                round
-              >
-                {{ table }}
-              </el-tag>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="result.profile" class="overview-card">
-          <div class="section-header">
-            <span>
-              <el-icon><DataAnalysis /></el-icon>
-              结果概览
-            </span>
-          </div>
-          <el-row :gutter="12" class="overview-grid">
-            <el-col v-for="item in result.profile.cards" :key="item.label" :xs="12" :sm="8" :md="6">
-              <div class="overview-item">
-                <div class="overview-label">{{ item.label }}</div>
-                <div class="overview-value">{{ item.value }}</div>
-                <div class="overview-sub">{{ item.sub }}</div>
-              </div>
-            </el-col>
-          </el-row>
-          <div v-if="result.profile.fieldTags?.length" class="field-tags">
-            <el-tag
-              v-for="field in result.profile.fieldTags"
-              :key="field"
-              size="small"
-              effect="plain"
-              round
+          <h2>AI 智能问数</h2>
+          <p>用自然语言查询业务数据，支持多表 JOIN、聚合、筛选等复杂查询</p>
+          <div class="suggestion-grid">
+            <div
+              v-for="s in suggestions"
+              :key="s"
+              class="suggestion-item"
+              @click="useSuggestion(s)"
             >
-              {{ field }}
-            </el-tag>
-          </div>
-        </div>
-
-        <!-- 可视化图表 -->
-        <div v-if="result.data && result.data.length > 0 && result.chartConfig" class="chart-card">
-          <div class="section-header">
-            <span>
-              <el-icon><TrendCharts /></el-icon>
-              数据可视化
-            </span>
-            <el-radio-group v-model="chartType" size="small" @change="onChartTypeChange">
-              <el-radio-button label="bar">柱状图</el-radio-button>
-              <el-radio-button label="line">折线图</el-radio-button>
-              <el-radio-button label="pie">饼图</el-radio-button>
-              <el-radio-button label="table">表格</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div ref="chartContainer" class="chart-container" style="height: 400px;"></div>
-        </div>
-
-        <!-- 数据结果 -->
-        <div v-if="result.data && result.data.length > 0" class="data-card">
-          <div class="section-header">
-            <span>
-              <el-icon><DataAnalysis /></el-icon>
-              数据明细（{{ result.data.length }} 条）
-            </span>
-            <el-button size="small" @click="exportData">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-          </div>
-          <el-table :data="result.data" stripe border class="result-table" max-height="400">
-          <el-table-column
-              v-for="col in result.columns"
-              :key="col"
-              :prop="col"
-              :label="getFieldLabel(col)"
-              min-width="120"
-            />
-          </el-table>
-        </div>
-
-        <el-collapse class="detail-collapse" v-if="result">
-          <el-collapse-item title="查看查询细节" name="detail">
-            <div v-if="result.thinking" class="thinking-block">
-              <p><strong>命中来源：</strong>{{ result.thinking.match_source || 'AI 在线生成' }}</p>
-              <p><strong>推荐表：</strong>{{ (result.thinking.recommended_tables || []).join('、') || '系统自动判断' }}</p>
-              <p><strong>说明：</strong>{{ result.thinking.reasoning || result.explanation || '系统已完成问数' }}</p>
+              {{ s }}
             </div>
-            <pre v-if="result.sql" class="sql-code">{{ result.sql }}</pre>
-          </el-collapse-item>
-        </el-collapse>
+          </div>
+        </div>
 
-        <el-empty v-if="!result.data || result.data.length === 0" description="没有查询到数据，试试换个时间或换一种说法" />
-      </div>
+        <!-- 消息列表 -->
+        <div v-else class="message-list">
+          <div
+            v-for="(msg, idx) in messages"
+            :key="idx"
+            class="message"
+            :class="msg.role"
+          >
+            <div class="message-avatar">
+              <el-avatar :size="30" v-if="msg.role === 'user'" class="user-avatar">
+                <el-icon><User /></el-icon>
+              </el-avatar>
+              <el-avatar :size="30" v-else class="ai-avatar">
+                <el-icon><Cpu /></el-icon>
+              </el-avatar>
+            </div>
+            <div class="message-content">
+              <div class="message-text" v-if="msg.role === 'user'">{{ msg.content }}</div>
 
-      <!-- 初始状态 -->
-      <div v-else class="empty-state">
-        <el-empty description="输入问题，AI 帮您查询数据" />
+              <div v-else class="ai-response">
+                <!-- 智能解读 -->
+                <div v-if="msg.insight" class="ai-insight">
+                  <div class="ai-insight-header">
+                    <el-icon :size="14"><Lightning /></el-icon>
+                    <span>结论摘要</span>
+                  </div>
+                  <div class="ai-insight-body">
+                    <p>{{ msg.insight }}</p>
+                    <div v-if="msg.highlights?.length" class="insight-bullets">
+                      <div v-for="(item, i) in msg.highlights" :key="i" class="insight-bullet">
+                        <span class="insight-bullet-dot"></span>
+                        <span>{{ item }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        <!-- 查询历史 -->
-        <div class="history-section">
-          <h4>
-            <el-icon><Clock /></el-icon>
-            最近查询
-          </h4>
-          <ul class="history-list">
-            <li v-for="(h, index) in queryHistory" :key="index" @click="loadHistory(h)" class="history-item">
-              <span class="history-question">{{ h.question }}</span>
-              <span class="history-time">{{ h.time }}</span>
-            </li>
-          </ul>
+                <!-- 结果概览 KPI -->
+                <div v-if="msg.cards?.length" class="ai-kpi-grid">
+                  <div v-for="(card, i) in msg.cards" :key="i" class="ai-kpi-card">
+                    <div class="ai-kpi-label">{{ card.label }}</div>
+                    <div class="ai-kpi-value">{{ card.value }}</div>
+                    <div class="ai-kpi-sub">{{ card.sub }}</div>
+                  </div>
+                </div>
+
+                <!-- 可视化图表 -->
+                <div v-if="msg.hasChart && msg.data?.length" class="ai-chart">
+                  <div class="ai-chart-header">
+                    <span><el-icon :size="14"><TrendCharts /></el-icon> 数据可视化</span>
+                    <el-radio-group v-model="msg.chartType" size="small" @change="() => onChartTypeChange(msg)">
+                      <el-radio-button label="bar">柱状图</el-radio-button>
+                      <el-radio-button label="line">折线图</el-radio-button>
+                      <el-radio-button label="pie">饼图</el-radio-button>
+                    </el-radio-group>
+                  </div>
+                  <div :ref="el => setChartRef(idx, el)" class="ai-chart-container"></div>
+                </div>
+
+                <!-- 数据表格 -->
+                <div v-if="msg.data?.length" class="ai-data-table">
+                  <div class="ai-table-header">
+                    <span><el-icon :size="14"><Grid /></el-icon> 数据明细（{{ msg.data.length }} 条）</span>
+                    <el-button size="small" text @click="exportMsgData(msg)">
+                      <el-icon><Download /></el-icon>
+                      导出
+                    </el-button>
+                  </div>
+                  <el-table :data="msg.data" stripe border size="small" max-height="360" class="ai-table">
+                    <el-table-column
+                      v-for="col in msg.columns"
+                      :key="col"
+                      :prop="col"
+                      :label="getFieldLabel(col)"
+                      min-width="110"
+                      show-overflow-tooltip
+                    />
+                  </el-table>
+                </div>
+
+                <!-- SQL 和 思考过程 -->
+                <div v-if="msg.sql || msg.thinking" class="ai-details">
+                  <el-collapse>
+                    <el-collapse-item v-if="msg.sql" title="查看 SQL">
+                      <pre class="sql-code">{{ msg.sql }}</pre>
+                    </el-collapse-item>
+                    <el-collapse-item v-if="msg.thinking" :title="msg.thinking.match_source || '思考过程'">
+                      <div class="thinking-content">
+                        <p v-if="msg.thinking.reasoning"><strong>推理：</strong>{{ msg.thinking.reasoning }}</p>
+                        <div v-if="msg.thinking.recommended_tables?.length" class="thinking-tags">
+                          <el-tag v-for="t in msg.thinking.recommended_tables" :key="t" size="small" type="success" effect="plain">{{ t }}</el-tag>
+                        </div>
+                      </div>
+                    </el-collapse-item>
+                  </el-collapse>
+                </div>
+
+                <div v-if="msg.role === 'assistant' && (!msg.data || msg.data.length === 0) && !msg.insight" class="no-data">
+                  没有查询到数据，试试换个时间或换一种说法
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 加载中 -->
+          <div v-if="loading" class="message assistant">
+            <div class="message-avatar">
+              <el-avatar :size="30" class="ai-avatar">
+                <el-icon><Cpu /></el-icon>
+              </el-avatar>
+            </div>
+            <div class="message-content">
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </el-card>
 
+      <!-- 输入区 -->
+      <div class="input-area">
+        <div class="input-box">
+          <el-input
+            v-model="inputMessage"
+            type="textarea"
+            :autosize="{ minRows: 1, maxRows: 5 }"
+            placeholder="请输入你的问题，例如：上个月销售额最高的产品是什么..."
+            @keydown.enter.exact.prevent="sendMessage"
+            class="chat-input"
+            resize="none"
+          />
+          <el-button
+            type="primary"
+            circle
+            @click="sendMessage"
+            :disabled="!inputMessage.trim() || loading"
+            class="send-btn"
+          >
+            <el-icon><Top /></el-icon>
+          </el-button>
+        </div>
+        <div class="input-hint">
+          <span>Enter 发送 · Shift+Enter 换行 · 支持多表 JOIN、聚合查询</span>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, nextTick, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
 import {
-  ChatDotRound, Lightning, Search, TrendCharts, DataAnalysis,
-  Download, Clock
+  ChatDotRound, ChatLineRound, Delete, Plus, User, Cpu, Top,
+  Lightning, TrendCharts, Download, Grid, Sunny, Moon
 } from '@element-plus/icons-vue'
 
-const question = ref('')
+const currentConvId = ref(null)
+const messages = ref([])
+const inputMessage = ref('')
 const loading = ref(false)
-const result = ref(null)
+const messagesContainerRef = ref(null)
 const quotaRemaining = ref(100)
 const dailyQuota = ref(100)
-const chartType = ref('bar')
-const chartContainer = ref(null)
-let chartInstance = null
+const sourceLabel = ref('AI 智能问数')
+const sourceTagType = ref('success')
+const isDark = ref(false)
 
-const quickQuestions = [
-  '各项目去化率排名',
-  '本月回款总额及环比',
-  '客户跟进记录最多的前 10 位',
-  '各项目销售目标达成率',
-  '购买金额最高的客户',
-  '各项目的房源状态分布',
-  '本月退款金额统计',
-  '集团现金流分析',
-  '各项目成本与预算差异',
-  '各户型面积均价排名',
-  '应收逾期账款明细',
-  '各项目净利润率',
-  '认购转化率统计',
-  '各月回款趋势',
-  '各城市销售额排名'
+const chartInstances = reactive({})
+const chartRefs = reactive({})
+const setChartRef = (idx, el) => { if (el) chartRefs[idx] = el }
+
+const suggestions = [
+  '本月各项目签约回款情况',
+  '上月销售额最高的产品 TOP5',
+  '近 30 天销售趋势',
+  '客户购买金额排行',
+  '各城市销售额分布',
+  '本月回款率统计',
 ]
 
-const queryHistory = ref([])
+const fieldLabelMap = {
+  month: '月份', date: '日期', day: '日期', year: '年份',
+  project_name: '项目名称', project: '项目', project_id: '项目ID',
+  building_name: '楼栋名称', building_id: '楼栋ID',
+  unit_name: '房源名称', unit_id: '房源ID',
+  customer_name: '客户名称', customer_id: '客户ID',
+  city: '城市', province: '省份', category: '分类',
+  name: '名称', status: '状态', count: '数量',
+  total_count: '总数量', total_sales: '签约金额', sales_amount: '签约金额',
+  total_amount: '总金额', amount: '金额', received_amount: '回款金额',
+  total_received: '回款金额', receivables: '应收余额', total_receivables: '应收余额',
+  total_cost: '成本金额', cost_amount: '成本金额',
+  total_expense: '费用金额', fee_amount: '费用金额',
+  profit: '利润', total_profit: '利润金额', profit_margin: '利润率',
+  collection_rate: '回款率', subscription_rate: '认购转签约率',
+  sell_through_rate: '去化率', contract_count: '签约套数',
+  total_units: '房源总数', total_contracts: '签约套数',
+  total_subscriptions: '认购套数', order_count: '订单数', quantity: '数量'
+}
 
-// API 请求封装
+const chartColors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  try { localStorage.setItem('ai-query-theme', isDark.value ? 'dark' : 'light') } catch {}
+  // 重新渲染图表适配主题
+  setTimeout(() => {
+    Object.values(chartInstances).forEach(c => {
+      if (c) c.resize()
+    })
+  }, 100)
+}
+
 const apiRequest = async (method, url, data = {}) => {
   const token = localStorage.getItem('token')
   const config = {
     method: method.toUpperCase(),
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
   }
-
   if (method.toUpperCase() !== 'GET' && Object.keys(data).length > 0) {
     config.body = JSON.stringify(data)
   }
-
+  const response = await fetch(url, config)
+  const text = await response.text()
   try {
-    const response = await fetch(url, config)
-    const text = await response.text()
-
-    try {
-      const parsed = JSON.parse(text)
-      if (!response.ok) {
-        throw new Error(parsed.detail || parsed.message || '请求失败')
-      }
-      return parsed
-    } catch (parseError) {
-      if (!response.ok) {
-        throw new Error(text || '请求失败')
-      }
-      return text
-    }
-  } catch (error) {
-    throw error
+    const parsed = JSON.parse(text)
+    if (!response.ok) throw new Error(parsed.detail || parsed.message || '请求失败')
+    return parsed
+  } catch (e) {
+    if (!response.ok) throw new Error(text || '请求失败')
+    return text
   }
-}
-
-const handleQuery = async () => {
-  if (!question.value.trim()) {
-    ElMessage.warning('请输入问题')
-    return
-  }
-
-  if (quotaRemaining.value <= 0) {
-    ElMessage.warning('今日查询配额已用完，请明天再来')
-    return
-  }
-
-  loading.value = true
-  result.value = null
-
-  try {
-    const res = await apiRequest('POST', '/ai-query/execute-query', {
-      question: question.value,
-      top_k: 10
-    })
-
-    result.value = {
-      sql: res.sql,
-      explanation: res.explanation,
-      data: res.data,
-      columns: res.columns,
-      insight: generateInsight(res.data, res.columns, question.value),
-      chartConfig: res.data && res.data.length > 0 ? { enabled: true } : null,
-      thinking: res.thinking || null,
-      profile: buildResultProfile(res.data, res.columns, res.thinking, res.explanation, question.value),
-      sourceLabel: getSourceLabel(res.thinking)
-    }
-
-    if (res.chart_type && res.data && res.data.length > 0) {
-      chartType.value = res.chart_type
-    }
-
-    saveQueryHistory(question.value, res.sql)
-    quotaRemaining.value--
-
-    if (res.data && res.data.length > 0) {
-      await nextTick()
-      renderChart(res.data, res.columns)
-    }
-
-    ElMessage.success('查询成功')
-  } catch (error) {
-    ElMessage.error('查询失败：' + (error.message || '未知错误'))
-  } finally {
-    loading.value = false
-  }
-}
-
-const exportData = () => {
-  const data = JSON.stringify(result.value.data, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `ai-query-${Date.now()}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('数据已导出')
-}
-
-const saveQueryHistory = (question, sql) => {
-  const history = {
-    question: question,
-    sql: sql,
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-  queryHistory.value.unshift(history)
-  if (queryHistory.value.length > 10) {
-    queryHistory.value.pop()
-  }
-}
-
-const loadHistory = (history) => {
-  question.value = history.question
-}
-
-// 渲染图表
-const renderChart = (data, columns) => {
-  if (!chartContainer.value || !data || data.length === 0) return
-
-  if (chartInstance) {
-    chartInstance.dispose()
-  }
-
-  chartInstance = echarts.init(chartContainer.value)
-
-  const { xAxis, series, yAxisData } = analyzeChartData(data, columns)
-
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      }
-    },
-    legend: {
-      data: series.map(s => s.name),
-      bottom: 10
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '10%',
-      top: '10%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: xAxis,
-      axisLabel: {
-        interval: 0,
-        rotate: 30,
-        fontSize: 11
-      },
-      axisTick: {
-        alignWithLabel: true
-      }
-    },
-    yAxis: yAxisData,
-    series: series
-  }
-
-  chartInstance.setOption(option)
-
-  window.addEventListener('resize', () => {
-    chartInstance?.resize()
-  })
-}
-
-// 图表颜色
-const chartColors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
-
-const fieldLabelMap = {
-  month: '月份',
-  date: '日期',
-  day: '日期',
-  year: '年份',
-  project_name: '项目名称',
-  project: '项目',
-  project_id: '项目ID',
-  building_name: '楼栋名称',
-  building_id: '楼栋ID',
-  unit_name: '房源名称',
-  unit_id: '房源ID',
-  customer_name: '客户名称',
-  customer_id: '客户ID',
-  city: '城市',
-  province: '省份',
-  category: '分类',
-  name: '名称',
-  status: '状态',
-  count: '数量',
-  total_count: '总数量',
-  total_sales: '签约金额',
-  sales_amount: '签约金额',
-  total_amount: '总金额',
-  amount: '金额',
-  received_amount: '回款金额',
-  total_received: '回款金额',
-  receivables: '应收余额',
-  total_receivables: '应收余额',
-  total_cost: '成本金额',
-  cost_amount: '成本金额',
-  total_expense: '费用金额',
-  fee_amount: '费用金额',
-  profit: '利润',
-  total_profit: '利润金额',
-  profit_margin: '利润率',
-  collection_rate: '回款率',
-  subscription_rate: '认购转签约率',
-  sell_through_rate: '去化率',
-  contract_count: '签约套数',
-  total_units: '房源总数',
-  total_contracts: '签约套数',
-  total_subscriptions: '认购套数',
-  order_count: '订单数',
-  quantity: '数量'
-}
-
-const getFieldLabel = (field) => {
-  if (!field) return '字段'
-  const key = String(field).trim()
-  if (fieldLabelMap[key]) return fieldLabelMap[key]
-  const lower = key.toLowerCase()
-  if (fieldLabelMap[lower]) return fieldLabelMap[lower]
-  return key
-    .replace(/_/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .trim()
-}
-
-// 分析图表数据
-const analyzeChartData = (data, columns) => {
-  if (!data || data.length === 0 || !columns || columns.length < 2) {
-    return { xAxis: [], series: [], yAxisData: { type: 'value' } }
-  }
-
-  let dimensionField = columns.find(c => {
-    const sample = data[0]?.[c]
-    return sample !== null && sample !== undefined && typeof sample === 'string' && String(sample).length < 30
-  }) || columns[0]
-
-  const xAxis = data.map(item => String(item[dimensionField] ?? ''))
-
-  const measureFields = columns.filter(c => {
-    if (c === dimensionField) return false
-    const sample = data[0]?.[c]
-    return sample !== null && sample !== undefined && !isNaN(Number(sample))
-  })
-
-  // 柱状图/折线图
-  const series = measureFields.slice(0, 3).map((field, idx) => ({
-    name: getFieldLabel(field),
-    type: chartType.value,
-    data: data.map(item => Number(item[field]) || 0),
-    itemStyle: {
-      color: chartColors[idx % chartColors.length]
-    },
-    label: {
-      show: chartType.value !== 'pie' && data.length <= 15,
-      position: 'top',
-      fontSize: 10,
-      formatter: (p) => {
-        const v = p.value
-        if (Math.abs(v) >= 10000) return (v / 10000).toFixed(1) + '万'
-        return v
-      }
-    }
-  }))
-
-  // 饼图特殊处理
-  if (chartType.value === 'pie') {
-    const mainField = measureFields[0] || columns[1]
-    series.length = 0
-    series.push({
-      name: getFieldLabel(mainField),
-      type: 'pie',
-      radius: ['40%', '70%'],
-      avoidLabelOverlap: true,
-      itemStyle: {
-        borderRadius: 6,
-        borderColor: '#fff',
-        borderWidth: 2
-      },
-      label: {
-        show: true,
-        formatter: '{b}: {c} ({d}%)',
-        fontSize: 11
-      },
-      emphasis: {
-        label: { show: true, fontSize: 13, fontWeight: 'bold' }
-      },
-      data: data.map((item, index) => ({
-        name: String(item[dimensionField]),
-        value: Number(item[mainField]) || 0,
-        itemStyle: { color: chartColors[index % chartColors.length] }
-      }))
-    })
-  }
-
-  const yAxisData = {
-    type: 'value',
-    axisLabel: {
-      formatter: (v) => {
-        if (Math.abs(v) >= 10000) return (v / 10000).toFixed(0) + '万'
-        return v
-      }
-    }
-  }
-
-  return { xAxis, series, yAxisData }
-}
-
-// 图表类型切换
-const onChartTypeChange = () => {
-  if (result.value?.data && result.value?.columns) {
-    renderChart(result.value.data, result.value.columns)
-  }
-}
-
-// 生成智能解读
-const generateInsight = (data, columns, question) => {
-  if (!data || data.length === 0 || !columns || columns.length < 2) {
-    return '暂无数据可分析'
-  }
-
-  const dimensionField = columns[0]
-  const measureField = columns[1]
-
-  const values = data.map(item => Number(item[measureField]) || 0)
-  const total = values.reduce((sum, val) => sum + val, 0)
-  const avg = total / values.length
-  const max = Math.max(...values)
-  const min = Math.min(...values)
-  const maxItem = data.find(item => Number(item[measureField]) === max)
-  const minItem = data.find(item => Number(item[measureField]) === min)
-
-  const questionLower = question.toLowerCase()
-
-  if (questionLower.includes('最高') || questionLower.includes('最大')) {
-    return `查询结果显示，${maxItem ? maxItem[dimensionField] : '该项'}的${getFieldLabel(measureField)}最高，达到${max}。${data.length}个数据项的${getFieldLabel(measureField)}总计为${total}，平均值为${avg.toFixed(2)}。`
-  }
-
-  if (questionLower.includes('最低') || questionLower.includes('最小')) {
-    return `查询结果显示，${minItem ? minItem[dimensionField] : '该项'}的${getFieldLabel(measureField)}最低，为${min}。${data.length}个数据项的${getFieldLabel(measureField)}总计为${total}，平均值为${avg.toFixed(2)}。`
-  }
-
-  if (questionLower.includes('占比') || questionLower.includes('比例')) {
-    const percentages = data.map(item => {
-      const value = Number(item[measureField]) || 0
-      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0
-      return `${item[dimensionField]}：${percentage}%`
-    }).join('，')
-    return `各项目的占比情况如下：${percentages}。总计：${total}。`
-  }
-
-  if (questionLower.includes('总额') || questionLower.includes('总计') || questionLower.includes('多少')) {
-    return `查询结果显示，${getFieldLabel(measureField)}总计为${total}。共有${data.length}条记录，平均值为${avg.toFixed(2)}。其中最高值为${max}（${maxItem ? maxItem[dimensionField] : '未知'}），最低值为${min}（${minItem ? minItem[dimensionField] : '未知'}）。`
-  }
-
-  return `查询共返回${data.length}条数据。${getFieldLabel(measureField)}的总计为${total}，平均值为${avg.toFixed(2)}。最高值为${max}（${maxItem ? maxItem[dimensionField] : '未知'}），最低值为${min}（${minItem ? minItem[dimensionField] : '未知'}）。`
 }
 
 const formatBigNumber = (value) => {
@@ -603,577 +290,465 @@ const formatBigNumber = (value) => {
   return num.toFixed(2)
 }
 
-const getSourceLabel = (thinking) => {
-  const source = thinking?.match_source || ''
-  if (String(source).includes('标准库')) return '标准库命中'
-  if (String(source).includes('拦截')) return '安全拦截'
-  return 'AI 在线生成'
+const getFieldLabel = (field) => {
+  if (!field) return '字段'
+  const key = String(field).trim()
+  if (fieldLabelMap[key]) return fieldLabelMap[key]
+  const lower = key.toLowerCase()
+  if (fieldLabelMap[lower]) return fieldLabelMap[lower]
+  return key.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim()
 }
 
-const buildResultProfile = (data, columns, thinking, explanation, questionText) => {
-  if (!data || data.length === 0 || !columns || columns.length === 0) return null
+const getSourceLabel = (thinking) => {
+  const source = thinking?.match_source || ''
+  if (String(source).includes('标准库')) return { label: '标准库命中', type: 'success' }
+  if (String(source).includes('拦截')) return { label: '安全拦截', type: 'danger' }
+  return { label: 'AI 在线生成', type: 'warning' }
+}
 
-  const dimensionField = columns.find(col => {
-    const sample = data[0]?.[col]
-    return sample !== null && sample !== undefined && typeof sample === 'string'
-  }) || columns[0]
+const generateInsight = (data, columns, question) => {
+  if (!data || data.length === 0 || !columns || columns.length < 2) return null
+  const dimField = columns[0], measureField = columns[1]
+  const values = data.map(item => Number(item[measureField]) || 0)
+  const total = values.reduce((s, v) => s + v, 0)
+  const avg = total / values.length
+  const max = Math.max(...values), min = Math.min(...values)
+  const maxItem = data.find(item => Number(item[measureField]) === max)
+  const minItem = data.find(item => Number(item[measureField]) === min)
+  const q = question.toLowerCase()
 
-  const numericFields = columns.filter(col => {
-    if (col === dimensionField) return false
-    return data.some(item => item[col] !== null && item[col] !== undefined && !Number.isNaN(Number(item[col])))
-  })
+  let insight = ''
+  if (q.includes('最高') || q.includes('最大')) insight = `${maxItem?.[dimField] ?? '该项'}的${getFieldLabel(measureField)}最高，达到 ${formatBigNumber(max)}。`
+  else if (q.includes('最低') || q.includes('最小')) insight = `${minItem?.[dimField] ?? '该项'}的${getFieldLabel(measureField)}最低，为 ${formatBigNumber(min)}。`
+  else insight = `共返回 ${data.length} 条数据，${getFieldLabel(measureField)}总计 ${formatBigNumber(total)}，平均 ${formatBigNumber(avg)}。`
 
-  const primaryField = numericFields[0] || columns.find(col => col !== dimensionField) || columns[0]
+  const highlights = [
+    `最高值：${formatBigNumber(max)}（${maxItem?.[dimField] ?? '未知'}）`,
+    `最低值：${formatBigNumber(min)}（${minItem?.[dimField] ?? '未知'}）`
+  ]
+  return { insight, highlights }
+}
+
+const buildCards = (data, columns) => {
+  if (!data || data.length === 0 || !columns || columns.length === 0) return []
+  const dimField = columns.find(c => typeof data[0]?.[c] === 'string') || columns[0]
+  const numFields = columns.filter(c => c !== dimField && data.some(item => !Number.isNaN(Number(item[c]))))
+  const primaryField = numFields[0] || columns.find(c => c !== dimField) || columns[0]
   const values = primaryField ? data.map(item => Number(item[primaryField]) || 0) : []
-  const total = values.reduce((sum, val) => sum + val, 0)
+  const total = values.reduce((s, v) => s + v, 0)
   const avg = values.length ? total / values.length : 0
   const max = values.length ? Math.max(...values) : 0
-  const min = values.length ? Math.min(...values) : 0
   const maxItem = primaryField ? data.find(item => Number(item[primaryField]) === max) : null
-  const minItem = primaryField ? data.find(item => Number(item[primaryField]) === min) : null
-
   const cards = [
     { label: '记录数', value: data.length, sub: '返回行数' },
     { label: '字段数', value: columns.length, sub: '输出列数' },
-    { label: '数值字段', value: numericFields.length, sub: '可统计指标' }
   ]
-
-  if (primaryField) {
-    cards.push(
-      { label: '核心指标总计', value: formatBigNumber(total), sub: getFieldLabel(primaryField) },
-      { label: '平均值', value: formatBigNumber(avg), sub: getFieldLabel(primaryField) }
-    )
-  }
-
-  if (maxItem) {
-    cards.push({ label: '最大值', value: formatBigNumber(max), sub: String(maxItem[dimensionField] ?? '未知') })
-  }
-
-  const highlights = []
-  if (primaryField && data.length > 0) {
-    highlights.push(`主指标「${getFieldLabel(primaryField)}」合计 ${formatBigNumber(total)}，平均 ${formatBigNumber(avg)}`)
-    if (maxItem) {
-      highlights.push(`最高值来自「${String(maxItem[dimensionField] ?? '未知')}」`)
-    }
-    if (minItem) {
-      highlights.push(`最低值来自「${String(minItem[dimensionField] ?? '未知')}」`)
-    }
-  }
-
-  if (thinking?.recommended_tables?.length) {
-    highlights.push(`优先使用：${thinking.recommended_tables.slice(0, 3).join('、')}`)
-  }
-
-  if (thinking?.reasoning) {
-    highlights.push(thinking.reasoning)
-  } else if (explanation) {
-    highlights.push(String(explanation).slice(0, 100))
-  }
-
-  return {
-    cards: cards.slice(0, 6),
-    highlights: highlights.slice(0, 4),
-    recommendedTables: thinking?.recommended_tables || [],
-    fieldTags: columns.slice(0, 8).map(getFieldLabel)
-  }
+  if (primaryField) cards.push({ label: '总计', value: formatBigNumber(total), sub: getFieldLabel(primaryField) })
+  if (primaryField) cards.push({ label: '平均值', value: formatBigNumber(avg), sub: getFieldLabel(primaryField) })
+  if (maxItem) cards.push({ label: '最大值', value: formatBigNumber(max), sub: String(maxItem[dimField] ?? '未知') })
+  return cards.slice(0, 5)
 }
 
-// 加载用户配额
-const loadQuota = async () => {
+
+const scrollToBottom = () => {
+  nextTick(() => { if (messagesContainerRef.value) messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight })
+}
+
+const useSuggestion = (text) => { inputMessage.value = text; sendMessage() }
+// 用 localStorage 持久化最后一次对话，刷新页面自动恢复
+const saveLastConversation = () => {
   try {
-    const quota = await apiRequest('get', '/api/portal/ai-query/quota')
-    quotaRemaining.value = quota.remaining || 100
-    dailyQuota.value = quota.daily || 100
-  } catch (error) {
-    console.error('加载配额失败', error)
-  }
+    localStorage.setItem('ai-query-last-conv', JSON.stringify({
+      messages: messages.value,
+      convId: currentConvId.value
+    }))
+  } catch {}
 }
+
+const loadLastConversation = () => {
+  try {
+    const saved = localStorage.getItem('ai-query-last-conv')
+    if (saved) {
+      const data = JSON.parse(saved)
+      messages.value = data.messages || []
+      currentConvId.value = data.convId || null
+      // 恢复图表
+      nextTick(() => {
+        messages.value.forEach((m, idx) => {
+          if (m.role === 'assistant' && m.data?.length && chartRefs[idx]) {
+            setTimeout(() => renderChartForMsg(m, chartRefs[idx]), 100)
+          }
+        })
+      })
+    }
+  } catch {}
+}
+
+const clearLastConversation = () => {
+  try { localStorage.removeItem('ai-query-last-conv') } catch {}
+}
+
+const newConversation = () => {
+  currentConvId.value = null
+  messages.value = []
+  clearLastConversation()
+  Object.keys(chartInstances).forEach(k => { chartInstances[k]?.dispose(); delete chartInstances[k] })
+}
+
+const clearCurrentChat = () => { messages.value = []; currentConvId.value = null; clearLastConversation(); Object.keys(chartInstances).forEach(k => { chartInstances[k]?.dispose(); delete chartInstances[k] }) }
+
+
+const sendMessage = async () => {
+  if (!inputMessage.value.trim() || loading.value) return
+  const text = inputMessage.value.trim(); inputMessage.value = ''
+  messages.value.push({ role: 'user', content: text }); await nextTick(); scrollToBottom()
+  loading.value = true
+
+  try {
+    const res = await apiRequest('POST', '/ai-query/execute-query', { question: text, top_k: 10 })
+    const srcInfo = getSourceLabel(res.thinking); sourceLabel.value = srcInfo.label; sourceTagType.value = srcInfo.type
+    const aiMsg = { role: 'assistant', content: '', sql: res.sql, data: res.data || [], columns: res.columns || [], thinking: res.thinking || null, chartType: res.chart_type || 'bar', hasChart: res.data && res.data.length > 0 }
+    const insightData = generateInsight(res.data, res.columns, text)
+    if (insightData) { aiMsg.insight = insightData.insight; aiMsg.highlights = insightData.highlights }
+    aiMsg.cards = buildCards(res.data, res.columns)
+    messages.value.push(aiMsg); quotaRemaining.value = Math.max(0, quotaRemaining.value - 1)
+    await nextTick(); scrollToBottom()
+    const lastIdx = messages.value.length - 1
+    if (aiMsg.data?.length && chartRefs[lastIdx]) setTimeout(() => renderChartForMsg(aiMsg, chartRefs[lastIdx]), 100)
+
+    // 保存到 localStorage
+    saveLastConversation()
+
+    ElMessage.success('查询成功')
+  } catch (error) {
+    messages.value.push({ role: 'assistant', content: `查询失败：${error.message || '未知错误'}`, isError: true })
+    ElMessage.error('查询失败：' + (error.message || '未知错误'))
+  } finally { loading.value = false; await nextTick(); scrollToBottom() }
+}
+
+const analyzeChartData = (data, columns, chartType) => {
+  if (!data || data.length === 0 || !columns || columns.length < 2) return { xAxis: [], series: [], yAxisData: { type: 'value' } }
+  const dimField = columns.find(c => { const s = data[0]?.[c]; return s !== null && s !== undefined && typeof s === 'string' && String(s).length < 30 }) || columns[0]
+  const xAxis = data.map(item => String(item[dimField] ?? ''))
+  const measureFields = columns.filter(c => { if (c === dimField) return false; const s = data[0]?.[c]; return s !== null && s !== undefined && !Number.isNaN(Number(s)) })
+  const series = measureFields.slice(0, 3).map((field, idx) => ({
+    name: getFieldLabel(field), type: chartType, data: data.map(item => Number(item[field]) || 0),
+    itemStyle: { color: chartColors[idx % chartColors.length] },
+    label: { show: chartType !== 'pie' && data.length <= 15, position: 'top', fontSize: 10, formatter: (p) => Math.abs(p.value) >= 10000 ? (p.value / 10000).toFixed(1) + '万' : p.value }
+  }))
+  if (chartType === 'pie') {
+    const mainField = measureFields[0] || columns[1]; series.length = 0
+    series.push({ name: getFieldLabel(mainField), type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: true, itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 }, label: { show: true, formatter: '{b}: {c} ({d}%)', fontSize: 11 }, emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } }, data: data.map((item, i) => ({ name: String(item[dimField]), value: Number(item[mainField]) || 0, itemStyle: { color: chartColors[i % chartColors.length] } })) })
+  }
+  return { xAxis, series, yAxisData: { type: 'value', axisLabel: { formatter: (v) => Math.abs(v) >= 10000 ? (v / 10000).toFixed(0) + '万' : v } } }
+}
+
+const renderChartForMsg = (msg, container) => {
+  if (!container || !msg.data?.length) return
+  const key = messages.value.indexOf(msg)
+  if (chartInstances[key]) chartInstances[key].dispose()
+  const chart = echarts.init(container)
+  chartInstances[key] = chart
+  const { xAxis, series, yAxisData } = analyzeChartData(msg.data, msg.columns, msg.chartType)
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: series.map(s => s.name), bottom: 10, textStyle: { color: isDark.value ? '#94a3b8' : '#64748b' } },
+    grid: { left: '3%', right: '4%', bottom: '12%', top: '8%', containLabel: true },
+    xAxis: { type: 'category', data: xAxis, axisLabel: { interval: 0, rotate: 30, fontSize: 11, color: isDark.value ? '#94a3b8' : '#64748b' }, axisTick: { alignWithLabel: true }, axisLine: { lineStyle: { color: isDark.value ? '#334155' : '#e2e8f0' } } },
+    yAxis: { ...yAxisData, axisLine: { lineStyle: { color: isDark.value ? '#334155' : '#e2e8f0' } }, splitLine: { lineStyle: { color: isDark.value ? '#1e293b' : '#f1f5f9' } } },
+    series
+  })
+}
+
+const onChartTypeChange = (msg) => {
+  const idx = messages.value.indexOf(msg)
+  if (chartInstances[idx]) chartInstances[idx].dispose()
+  if (chartRefs[idx] && msg.data?.length) setTimeout(() => renderChartForMsg(msg, chartRefs[idx]), 50)
+}
+
+const exportMsgData = (msg) => {
+  if (!msg?.data) return
+  const blob = new Blob([JSON.stringify(msg.data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = `ai-query-${Date.now()}.json`; a.click()
+  URL.revokeObjectURL(url); ElMessage.success('数据已导出')
+}
+
+const loadQuota = async () => {
+  try { const quota = await apiRequest('get', '/api/portal/ai-query/quota'); quotaRemaining.value = quota.remaining || 100; dailyQuota.value = quota.daily || 100 } catch (e) { console.error('加载配额失败', e) }
+}
+
+const handleResize = () => { Object.values(chartInstances).forEach(c => c?.resize()) }
 
 onMounted(() => {
-  loadQuota()
+  try { const saved = localStorage.getItem('ai-query-theme'); if (saved === 'dark') isDark.value = true } catch {}
+  loadQuota(); loadLastConversation(); window.addEventListener('resize', handleResize)
 })
-
-onUnmounted(() => {
-  if (chartInstance) {
-    chartInstance.dispose()
-  }
-})
+onUnmounted(() => { Object.values(chartInstances).forEach(c => c?.dispose()); window.removeEventListener('resize', handleResize) })
 </script>
 
 <style scoped>
-.ai-query-page {
-  padding: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 24%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 20%),
-    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
-  min-height: 100%;
+.ai-query-fullscreen {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-code: #1e293b;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --sidebar-bg: #f1f5f9;
+  --sidebar-border: #e2e8f0;
+  --sidebar-text: #334155;
+  --sidebar-text-muted: #64748b;
+  --sidebar-hover: #e2e8f0;
+  --sidebar-active: #dbeafe;
+  --msg-user-bg: #3b82f6;
+  --msg-user-text: #ffffff;
+  --ai-avatar-bg: #dbeafe;
+  --ai-avatar-color: #2563eb;
+  --typing-bg: #2563eb;
+  --accent: #3b82f6;
+  --accent-light: #eff6ff;
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
+  --input-focus-border: #3b82f6;
+  --input-focus-shadow: rgba(59, 130, 246, 0.15);
+  --table-header-bg: #f8fafc;
+  --table-header-color: #475569;
+  --table-row-bg: #ffffff;
+  --table-row-striped: #f8fafc;
+  --table-cell-color: #0f172a;
+  --table-border: #e2e8f0;
+  --kpi-card-bg: #f8fafc;
+  --kpi-card-border: #e2e8f0;
+  --sql-code-bg: #1e293b;
+  --sql-code-color: #e2e8f0;
+  --welcome-text-primary: #0f172a;
+  --welcome-text-secondary: #64748b;
+  --suggestion-bg: #ffffff;
+  --suggestion-border: #e2e8f0;
+  --suggestion-hover-bg: #eff6ff;
+  --suggestion-hover-border: #3b82f6;
+  --suggestion-hover-text: #1e40af;
+  --collapse-header-color: #64748b;
+  --scrollbar-thumb: #cbd5e1;
 }
 
-.query-card {
-  max-width: 1000px;
-  margin: 0 auto 20px;
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+.ai-query-fullscreen.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-code: #0f172a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --border-hover: #475569;
+  --sidebar-bg: #1e293b;
+  --sidebar-border: #334155;
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-hover: #334155;
+  --sidebar-active: #1e3a5f;
+  --ai-avatar-bg: #1e293b;
+  --ai-avatar-color: #60a5fa;
+  --typing-bg: #60a5fa;
+  --accent: #3b82f6;
+  --accent-light: rgba(59, 130, 246, 0.1);
+  --input-bg: #1e293b;
+  --input-border: #334155;
+  --input-focus-border: #3b82f6;
+  --input-focus-shadow: rgba(59, 130, 246, 0.15);
+  --table-header-bg: #0f172a;
+  --table-header-color: #94a3b8;
+  --table-row-bg: #1e293b;
+  --table-row-striped: rgba(30, 41, 59, 0.6);
+  --table-cell-color: #e2e8f0;
+  --table-border: #334155;
+  --kpi-card-bg: #1e293b;
+  --kpi-card-border: #334155;
+  --sql-code-bg: #0f172a;
+  --sql-code-color: #e2e8f0;
+  --welcome-text-primary: #f1f5f9;
+  --welcome-text-secondary: #94a3b8;
+  --suggestion-bg: #1e293b;
+  --suggestion-border: #334155;
+  --suggestion-hover-bg: #334155;
+  --suggestion-hover-border: #60a5fa;
+  --suggestion-hover-text: #f1f5f9;
+  --collapse-header-color: #94a3b8;
+  --scrollbar-thumb: #475569;
 }
 
-.hero-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.8fr);
-  gap: 16px;
-  padding: 18px;
-  margin-bottom: 20px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.06));
-  border: 1px solid rgba(59, 130, 246, 0.12);
-}
+/* 全局背景 */
+.ai-query-fullscreen { background: var(--bg-primary); }
+.chat-main { background: var(--bg-primary); }
 
-.hero-copy h2 {
-  margin: 6px 0 8px;
-  font-size: 22px;
-  line-height: 1.25;
-  color: #0f172a;
-}
+/* 主区域 */
+.chat-main { display: flex; flex-direction: column; height: 100%; min-width: 0; }
 
-.hero-copy p {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.8;
-  color: #475569;
-}
-
-.hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.hero-stats {
-  display: grid;
-  gap: 10px;
-}
-
-.hero-stat {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.hero-stat-label {
-  display: block;
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-
-.hero-stat-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.helper-panel {
-  margin-bottom: 20px;
-  padding: 16px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.helper-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 10px;
-}
-
-.helper-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.helper-item {
-  padding: 12px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-}
-
-.helper-item-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #2563eb;
-  margin-bottom: 4px;
-}
-
-.helper-item-desc {
-  font-size: 13px;
-  color: #334155;
-  line-height: 1.6;
-}
-
-.card-header {
+.chat-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
+  padding: 0 16px;
+  height: 52px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  transition: border-color 0.3s ease;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-right .el-button { color: var(--text-secondary); }
+.theme-btn:hover { color: var(--accent) !important; }
 
-.header-icon {
-  color: #2563eb;
-}
+/* 消息区域 */
+.messages-container { flex: 1; overflow-y: auto; padding: 16px 0; }
+.messages-container::-webkit-scrollbar { width: 6px; }
+.messages-container::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 
-.title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
+/* 欢迎屏幕 */
+.welcome-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; }
+.welcome-icon { margin-bottom: 16px; }
+.welcome-screen h2 { font-size: 26px; color: var(--welcome-text-primary); margin: 0 0 8px; font-weight: 700; transition: color 0.3s ease; }
+.welcome-screen p { color: var(--welcome-text-secondary); font-size: 14px; margin: 0 0 32px; max-width: 480px; transition: color 0.3s ease; }
 
-.query-section {
-  margin-bottom: 20px;
-}
+.suggestion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 600px; width: 100%; }
 
-.question-input {
-  margin-bottom: 12px;
-}
-
-.question-input :deep(.el-textarea__inner) {
-  border-radius: 14px;
-  padding: 16px 18px;
-  font-size: 14px;
-  line-height: 1.6;
-  border-color: rgba(148, 163, 184, 0.22);
-}
-
-.query-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.query-btn {
-  padding: 12px 32px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
-}
-
-.quick-section {
-  margin-bottom: 20px;
-}
-
-.quick-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: #475569;
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.question-tag {
+.suggestion-item {
+  padding: 12px 14px;
+  background: var(--suggestion-bg);
+  border: 1px solid var(--suggestion-border);
+  border-radius: 10px;
   cursor: pointer;
-  padding: 8px 12px;
-  font-size: 12px;
-  transition: all 0.3s;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.15s;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.question-tag:hover {
-  background-color: rgba(37, 99, 235, 0.08);
-  border-color: #2563eb;
-  color: #2563eb;
-}
+.suggestion-item:hover { background: var(--suggestion-hover-bg); color: var(--suggestion-hover-text); border-color: var(--suggestion-hover-border); }
 
-.loading-state,
-.result-section,
-.empty-state {
-  margin-top: 20px;
-}
+/* 消息列表 */
+.message-list { max-width: 800px; margin: 0 auto; padding: 0 16px; display: flex; flex-direction: column; gap: 24px; }
 
-.sql-card,
-.data-card,
-.chart-card,
-.insight-card,
-.detail-collapse {
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
+.message { display: flex; gap: 12px; }
+.message.user { flex-direction: row-reverse; }
+.message-avatar { flex-shrink: 0; margin-top: 2px; }
 
-.insight-card {
-  background: linear-gradient(135deg, #1d4ed8 0%, #0f766e 100%);
-  color: white;
-  border: none;
-}
+.user-avatar { background: var(--msg-user-bg) !important; color: var(--msg-user-text) !important; }
+.ai-avatar { background: var(--ai-avatar-bg) !important; color: var(--ai-avatar-color) !important; border: 1px solid var(--border-color); transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
 
-.insight-content p {
-  margin: 0;
-  line-height: 1.8;
+.message-content { max-width: 85%; min-width: 0; }
+.message-role { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; transition: color 0.3s ease; }
+.message.user .message-role { text-align: right; }
+
+.message-text {
+  padding: 12px 16px;
+  border-radius: 12px;
   font-size: 14px;
-}
-
-.insight-bullets {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.insight-bullet {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.insight-bullet-dot {
-  width: 6px;
-  height: 6px;
-  margin-top: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.9;
-  flex: 0 0 auto;
-}
-
-.overview-card {
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
-}
-
-.overview-grid {
-  margin-top: 8px;
-}
-
-.overview-item {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 14px;
-  padding: 14px;
-  min-height: 96px;
-}
-
-.overview-label {
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 6px;
-}
-
-.overview-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.1;
-  margin-bottom: 4px;
-}
-
-.overview-sub {
-  font-size: 12px;
-  color: #475569;
-}
-
-.field-tags,
-.thinking-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.chart-card {
-  background: #fff;
-}
-
-.chart-container {
-  width: 100%;
-  margin-top: 16px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.section-header span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: #0f172a;
-  font-size: 14px;
-}
-
-.sql-code {
-  background: #1e293b;
-  color: #e2e8f0;
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 13px;
-  line-height: 1.8;
-}
-
-.thinking-block {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  color: #334155;
-  font-size: 13px;
   line-height: 1.7;
+  word-break: break-word;
 }
 
-.result-table {
-  margin-top: 12px;
-  border-radius: 8px;
-  overflow: hidden;
+.message.user .message-text { background: var(--msg-user-bg); color: var(--msg-user-text); border-bottom-right-radius: 4px; }
+
+/* AI 回复 */
+.ai-response { display: flex; flex-direction: column; gap: 16px; }
+
+.ai-insight { border-radius: 12px; overflow: hidden; background: var(--accent-light); border: 1px solid var(--border-color); transition: background 0.3s ease, border-color 0.3s ease; }
+.ai-insight-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--accent); border-bottom: 1px solid transparent; color: #fff; font-size: 13px; font-weight: 600; }
+.ai-insight-body { padding: 14px; color: var(--text-primary); font-size: 14px; line-height: 1.7; transition: color 0.3s ease; }
+.ai-insight-body p { margin: 0 0 10px; }
+
+.insight-bullets { display: flex; flex-direction: column; gap: 6px; }
+.insight-bullet { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.insight-bullet-dot { width: 6px; height: 6px; margin-top: 7px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+
+/* KPI 卡片 */
+.ai-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.ai-kpi-card { background: var(--kpi-card-bg); border: 1px solid var(--kpi-card-border); border-radius: 10px; padding: 14px; transition: background 0.3s ease, border-color 0.3s ease; }
+.ai-kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; transition: color 0.3s ease; }
+.ai-kpi-value { font-size: 22px; font-weight: 700; color: var(--text-primary); transition: color 0.3s ease; }
+.ai-kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; transition: color 0.3s ease; }
+
+/* 图表 */
+.ai-chart { border-radius: 12px; padding: 14px; background: var(--bg-card); border: 1px solid var(--border-color); transition: background 0.3s ease, border-color 0.3s ease; }
+.ai-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--text-primary); font-size: 13px; font-weight: 600; gap: 8px; }
+.ai-chart-container { width: 100%; height: 360px; }
+
+/* 数据表格 */
+.ai-data-table { border-radius: 12px; padding: 14px; background: var(--bg-card); border: 1px solid var(--border-color); transition: background 0.3s ease, border-color 0.3s ease; }
+.ai-table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--text-primary); font-size: 13px; font-weight: 600; }
+
+.ai-table :deep(.el-table__header th) { background: var(--table-header-bg) !important; color: var(--table-header-color) !important; border-color: var(--table-border) !important; }
+.ai-table :deep(.el-table__body td) { color: var(--table-cell-color) !important; border-color: var(--table-border) !important; }
+.ai-table :deep(.el-table__row) { background: var(--table-row-bg) !important; }
+.ai-table :deep(.el-table__row--striped) { background: var(--table-row-striped) !important; }
+
+/* 详情折叠 */
+.ai-details { border-radius: 12px; padding: 4px 14px; background: var(--bg-card); border: 1px solid var(--border-color); transition: background 0.3s ease, border-color 0.3s ease; }
+.ai-details :deep(.el-collapse-item__header) { color: var(--collapse-header-color); font-size: 12px; background: transparent; }
+.ai-details :deep(.el-collapse-item__wrap) { background: transparent; border-color: var(--border-color); }
+.ai-details :deep(.el-collapse-item__content) { padding-bottom: 14px; }
+
+.sql-code { background: var(--sql-code-bg); color: var(--sql-code-color); padding: 14px; border-radius: 8px; overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; transition: background 0.3s ease, color 0.3s ease; }
+
+.thinking-content { display: flex; flex-direction: column; gap: 8px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.thinking-content p { margin: 0; }
+.thinking-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.no-data { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
+
+/* 加载动画 */
+.typing-indicator { display: flex; gap: 4px; padding: 14px 18px; }
+.typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background: var(--typing-bg); animation: typing 1.2s infinite; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
 }
 
-.result-table :deep(.el-table__header th) {
-  background-color: #f1f5f9;
-  color: #475569;
-  font-weight: 600;
-}
+/* 输入区 */
+.input-area { padding: 12px 16px 16px; flex-shrink: 0; }
 
-.history-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.history-section h4 {
+.input-box {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #475569;
-  margin: 0 0 12px 0;
-}
-
-.history-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.history-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  background: #f8fafc;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.history-item:hover {
-  background: #f1f5f9;
-  transform: translateX(4px);
-}
-
-.history-question {
-  color: #475569;
-  font-size: 13px;
-}
-
-.history-time {
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.notice-alert {
-  max-width: 1000px;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 800px;
   margin: 0 auto;
-  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  padding: 8px 8px 8px 14px;
+  transition: border-color 0.15s, background 0.3s ease;
 }
 
-.notice-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
+.input-box:focus-within { border-color: var(--input-focus-border); box-shadow: 0 0 0 3px var(--input-focus-shadow); }
 
-.notice-content span {
-  font-weight: 600;
-}
+.chat-input { flex: 1; }
+.chat-input :deep(.el-textarea__inner) { background: transparent !important; border: none !important; box-shadow: none !important; padding: 4px 0 !important; font-size: 14px; color: var(--text-primary); resize: none; }
+.chat-input :deep(.el-textarea__inner)::placeholder { color: var(--text-muted); }
+.send-btn { flex-shrink: 0; }
 
-.notice-icon {
-  margin-top: 2px;
-}
+.input-hint { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 
-.notice-content ul {
-  margin: 0 0 0 8px;
-  padding-left: 16px;
-}
-
-.notice-content li {
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.8;
-}
-
+/* 响应式 */
 @media (max-width: 768px) {
-  .ai-query-page {
-    padding: 16px;
-  }
-
-  .hero-panel,
-  .helper-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .query-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .quick-grid {
-    grid-template-columns: 1fr;
-  }
+  .suggestion-grid { grid-template-columns: repeat(2, 1fr); }
+  .message-content { max-width: 92%; }
+  .ai-kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

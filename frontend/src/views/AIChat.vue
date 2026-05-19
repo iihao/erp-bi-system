@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-chat-fullscreen">
+  <div class="ai-chat-fullscreen" :class="{ dark: isDark }">
     <!-- 左侧对话列表 -->
     <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-header">
@@ -65,6 +65,9 @@
           </span>
         </div>
         <div class="header-right">
+          <el-button text size="small" @click="toggleTheme" class="theme-btn" :title="isDark ? '切换亮色' : '切换暗色'">
+            <el-icon><Sunny v-if="isDark" /><Moon v-else /></el-icon>
+          </el-button>
           <el-button text size="small" @click="clearCurrentChat">
             <el-icon><Delete /></el-icon>
             清空
@@ -167,7 +170,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, ChatLineRound, Delete, ChatDotRound,
-  User, Cpu, Top, Fold, Expand, Menu
+  User, Cpu, Top, Fold, Expand, Menu, Sunny, Moon
 } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 
@@ -182,8 +185,12 @@ const streamContent = ref('')
 const messagesContainer = ref(null)
 const selectedModel = ref('')
 const modelList = ref([])
+const CONV_TYPE = 'chat'
+const API_BASE = '/ai-chat/conversations'
+
 const sidebarCollapsed = ref(false)
 const isMobile = ref(false)
+const isDark = ref(false)
 
 const suggestions = [
   '解释一下什么是 RESTful API',
@@ -197,6 +204,11 @@ const suggestions = [
 const renderMarkdown = (content) => {
   if (!content) return ''
   try { return marked.parse(content) } catch { return content }
+}
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  try { localStorage.setItem('ai-chat-theme', isDark.value ? 'dark' : 'light') } catch {}
 }
 
 const loadModels = async () => {
@@ -220,7 +232,7 @@ const loadModels = async () => {
 const loadConversations = async () => {
   try {
     const token = localStorage.getItem('token')
-    const resp = await fetch('/ai-chat/conversations', {
+    const resp = await fetch(`${API_BASE}?type=${CONV_TYPE}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     const data = await resp.json()
@@ -236,7 +248,7 @@ const switchConversation = async (convId) => {
   messages.value = []
   try {
     const token = localStorage.getItem('token')
-    const resp = await fetch(`/ai-chat/conversations/${convId}`, {
+    const resp = await fetch(`${API_BASE}/${convId}?type=${CONV_TYPE}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     const data = await resp.json()
@@ -257,7 +269,7 @@ const deleteConversation = async (convId) => {
   try {
     await ElMessageBox.confirm('确定删除该对话吗？', '提示', { type: 'warning' })
     const token = localStorage.getItem('token')
-    await fetch(`/ai-chat/conversations/${convId}`, {
+    await fetch(`${API_BASE}/${convId}?type=${CONV_TYPE}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -382,6 +394,7 @@ const checkMobile = () => {
 }
 
 onMounted(() => {
+  try { const saved = localStorage.getItem('ai-chat-theme'); if (saved === 'dark') isDark.value = true } catch {}
   checkMobile()
   window.addEventListener('resize', checkMobile)
   loadConversations()
@@ -395,21 +408,110 @@ onMounted(() => {
   top: 60px;
   right: 0;
   bottom: 0;
-  left: var(--sidebar-width);
+  left: var(--sidebar-width, 200px);
   display: flex;
-  background: #1e1e2e;
   z-index: 10;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --sidebar-bg: #f1f5f9;
+  --sidebar-border: #e2e8f0;
+  --sidebar-text: #334155;
+  --sidebar-text-muted: #64748b;
+  --sidebar-hover: #e2e8f0;
+  --sidebar-active: #dbeafe;
+  --sidebar-active-icon: #3b82f6;
+  --border-color: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --msg-user-bg: #3b82f6;
+  --msg-user-text: #ffffff;
+  --ai-avatar-bg: #dbeafe;
+  --ai-avatar-color: #3b82f6;
+  --ai-avatar-border: #e2e8f0;
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
+  --input-focus-border: #3b82f6;
+  --input-focus-shadow: rgba(59, 130, 246, 0.15);
+  --suggestion-bg: #ffffff;
+  --suggestion-border: #e2e8f0;
+  --suggestion-hover-bg: #dbeafe;
+  --suggestion-hover-border: #3b82f6;
+  --suggestion-hover-text: #1e40af;
+  --code-bg: #f1f5f9;
+  --code-color: #0f172a;
+  --code-border: #e2e8f0;
+  --inline-code-bg: #e2e8f0;
+  --inline-code-color: #9d174d;
+  --blockquote-border: #3b82f6;
+  --blockquote-color: #64748b;
+  --table-border: #e2e8f0;
+  --table-header-bg: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+  --model-select-bg: #f1f5f9;
+  --model-select-border: #e2e8f0;
+  --del-color: #ef4444;
+  --typing-cursor: #3b82f6;
+  --strong-color: #9d174d;
+  --link-color: #3b82f6;
+  background: var(--bg-primary);
+}
+
+.ai-chat-fullscreen.dark {
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #181825;
+  --sidebar-bg: #181825;
+  --sidebar-border: #313244;
+  --sidebar-text: #cdd6f4;
+  --sidebar-text-muted: #a6adc8;
+  --sidebar-hover: #313244;
+  --sidebar-active: #45475a;
+  --sidebar-active-icon: #89b4fa;
+  --border-color: #313244;
+  --text-primary: #cdd6f4;
+  --text-secondary: #bac2de;
+  --text-muted: #6c7086;
+  --msg-user-bg: #45475a;
+  --msg-user-text: #cdd6f4;
+  --ai-avatar-bg: #313244;
+  --ai-avatar-color: #89b4fa;
+  --ai-avatar-border: #45475a;
+  --input-bg: #313244;
+  --input-border: #45475a;
+  --input-focus-border: #89b4fa;
+  --input-focus-shadow: rgba(137, 180, 250, 0.15);
+  --suggestion-bg: #313244;
+  --suggestion-border: #45475a;
+  --suggestion-hover-bg: #45475a;
+  --suggestion-hover-border: #585b70;
+  --suggestion-hover-text: #cdd6f4;
+  --code-bg: #181825;
+  --code-color: #cdd6f4;
+  --code-border: #313244;
+  --inline-code-bg: #313244;
+  --inline-code-color: #f5c2e7;
+  --blockquote-border: #89b4fa;
+  --blockquote-color: #a6adc8;
+  --table-border: #45475a;
+  --table-header-bg: #313244;
+  --scrollbar-thumb: #45475a;
+  --model-select-bg: #313244;
+  --model-select-border: #45475a;
+  --del-color: #f38ba8;
+  --typing-cursor: #89b4fa;
+  --strong-color: #f5c2e7;
+  --link-color: #89b4fa;
 }
 
 /* 左侧栏 */
 .sidebar {
   width: 260px;
-  background: #181825;
-  border-right: 1px solid #313244;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: width 0.25s ease;
+  transition: width 0.25s ease, background 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
 }
 
@@ -423,7 +525,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  border-bottom: 1px solid #313244;
+  border-bottom: 1px solid var(--sidebar-border);
   height: 52px;
   flex-shrink: 0;
 }
@@ -432,7 +534,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #cdd6f4;
+  color: var(--sidebar-text);
 }
 
 .logo-text {
@@ -441,11 +543,11 @@ onMounted(() => {
 }
 
 .toggle-btn {
-  color: #a6adc8;
+  color: var(--sidebar-text-muted);
 }
 
 .toggle-btn:hover {
-  color: #cdd6f4;
+  color: var(--sidebar-text);
 }
 
 .new-conv-btn {
@@ -467,7 +569,7 @@ onMounted(() => {
 }
 
 .conv-list::-webkit-scrollbar-thumb {
-  background: #45475a;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
@@ -482,26 +584,26 @@ onMounted(() => {
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
-  color: #bac2de;
+  color: var(--sidebar-text);
 }
 
 .conv-item:hover {
-  background: #313244;
+  background: var(--sidebar-hover);
 }
 
 .conv-item.active {
-  background: #45475a;
-  color: #cdd6f4;
+  background: var(--sidebar-active);
+  color: var(--sidebar-text);
 }
 
 .conv-icon {
   flex-shrink: 0;
   font-size: 16px;
-  color: #a6adc8;
+  color: var(--sidebar-text-muted);
 }
 
 .conv-item.active .conv-icon {
-  color: #89b4fa;
+  color: var(--sidebar-active-icon);
 }
 
 .conv-title {
@@ -512,7 +614,7 @@ onMounted(() => {
 
 .del-btn {
   opacity: 0;
-  color: #f38ba8;
+  color: var(--del-color);
   flex-shrink: 0;
   padding: 0 2px;
 }
@@ -523,7 +625,7 @@ onMounted(() => {
 
 .empty-text {
   text-align: center;
-  color: #6c7086;
+  color: var(--text-muted);
   font-size: 12px;
   padding: 20px 0;
 }
@@ -534,7 +636,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #1e1e2e;
+  background: var(--bg-primary);
 }
 
 .chat-header {
@@ -543,7 +645,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 0 16px;
   height: 52px;
-  border-bottom: 1px solid #313244;
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -554,14 +656,14 @@ onMounted(() => {
 }
 
 .mobile-menu-btn {
-  color: #a6adc8;
+  color: var(--sidebar-text-muted);
 }
 
 .model-label {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #a6adc8;
+  color: var(--sidebar-text-muted);
   font-size: 13px;
 }
 
@@ -570,12 +672,12 @@ onMounted(() => {
 }
 
 .model-select :deep(.el-input__wrapper) {
-  background: #313244;
-  border-color: #45475a;
+  background: var(--model-select-bg);
+  border-color: var(--model-select-border);
 }
 
 .model-select :deep(.el-input__inner) {
-  color: #cdd6f4;
+  color: var(--sidebar-text);
 }
 
 .header-right {
@@ -585,11 +687,15 @@ onMounted(() => {
 }
 
 .header-right .el-button {
-  color: #a6adc8;
+  color: var(--sidebar-text-muted);
 }
 
 .header-right .el-button:hover {
-  color: #f38ba8;
+  color: var(--del-color);
+}
+
+.theme-btn:hover {
+  color: #3b82f6 !important;
 }
 
 /* 消息区域 */
@@ -604,7 +710,7 @@ onMounted(() => {
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background: #45475a;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
@@ -624,13 +730,13 @@ onMounted(() => {
 
 .welcome-screen h2 {
   font-size: 24px;
-  color: #cdd6f4;
+  color: var(--text-primary);
   margin: 0 0 8px;
   font-weight: 700;
 }
 
 .welcome-screen p {
-  color: #a6adc8;
+  color: var(--text-secondary);
   font-size: 14px;
   margin: 0 0 32px;
 }
@@ -645,20 +751,20 @@ onMounted(() => {
 
 .suggestion-item {
   padding: 10px 14px;
-  background: #313244;
-  border: 1px solid #45475a;
+  background: var(--suggestion-bg);
+  border: 1px solid var(--suggestion-border);
   border-radius: 10px;
   cursor: pointer;
   font-size: 13px;
-  color: #bac2de;
+  color: var(--text-secondary);
   transition: all 0.15s;
   text-align: center;
 }
 
 .suggestion-item:hover {
-  background: #45475a;
-  color: #cdd6f4;
-  border-color: #585b70;
+  background: var(--suggestion-hover-bg);
+  color: var(--suggestion-hover-text);
+  border-color: var(--suggestion-hover-border);
 }
 
 /* 消息列表 */
@@ -686,9 +792,9 @@ onMounted(() => {
 }
 
 .ai-avatar {
-  background: #313244 !important;
-  color: #89b4fa !important;
-  border: 1px solid #45475a;
+  background: var(--ai-avatar-bg) !important;
+  color: var(--ai-avatar-color) !important;
+  border: 1px solid var(--ai-avatar-border);
 }
 
 .message-content {
@@ -699,7 +805,7 @@ onMounted(() => {
 .message-role {
   font-size: 11px;
   font-weight: 600;
-  color: #6c7086;
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
@@ -716,14 +822,14 @@ onMounted(() => {
 }
 
 .message.user .message-text {
-  background: #45475a;
-  color: #cdd6f4;
+  background: var(--msg-user-bg);
+  color: var(--msg-user-text);
   border-bottom-right-radius: 4px;
 }
 
 .message.assistant .message-text {
   background: transparent;
-  color: #cdd6f4;
+  color: var(--text-primary);
   padding: 0;
   border-radius: 0;
 }
@@ -732,55 +838,55 @@ onMounted(() => {
 .markdown :deep(p) { margin: 0 0 8px; }
 .markdown :deep(p:last-child) { margin-bottom: 0; }
 .markdown :deep(pre) {
-  background: #181825;
-  color: #cdd6f4;
+  background: var(--code-bg);
+  color: var(--code-color);
   padding: 14px 16px;
   border-radius: 8px;
   overflow-x: auto;
   font-size: 13px;
   line-height: 1.6;
   margin: 8px 0;
-  border: 1px solid #313244;
+  border: 1px solid var(--code-border);
 }
 .markdown :deep(code) {
-  background: #313244;
+  background: var(--inline-code-bg);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
   font-family: 'Consolas', 'Monaco', monospace;
-  color: #f5c2e7;
+  color: var(--inline-code-color);
 }
 .markdown :deep(pre code) { background: none; padding: 0; color: inherit; }
 .markdown :deep(ul), .markdown :deep(ol) { margin: 8px 0; padding-left: 24px; }
 .markdown :deep(li) { margin: 4px 0; }
 .markdown :deep(blockquote) {
-  border-left: 3px solid #89b4fa;
+  border-left: 3px solid var(--blockquote-border);
   padding: 4px 0 4px 12px;
   margin: 8px 0;
-  color: #a6adc8;
+  color: var(--blockquote-color);
 }
 .markdown :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; }
 .markdown :deep(th), .markdown :deep(td) {
-  border: 1px solid #45475a;
+  border: 1px solid var(--table-border);
   padding: 8px 12px;
   text-align: left;
   font-size: 13px;
-  color: #cdd6f4;
+  color: var(--text-primary);
 }
-.markdown :deep(th) { background: #313244; font-weight: 600; }
-.markdown :deep(strong) { color: #f5c2e7; }
+.markdown :deep(th) { background: var(--table-header-bg); font-weight: 600; }
+.markdown :deep(strong) { color: var(--strong-color); }
 .markdown :deep(h1), .markdown :deep(h2), .markdown :deep(h3) {
-  color: #cdd6f4;
+  color: var(--text-primary);
   margin: 16px 0 8px;
 }
-.markdown :deep(a) { color: #89b4fa; text-decoration: none; }
+.markdown :deep(a) { color: var(--link-color); text-decoration: none; }
 .markdown :deep(a:hover) { text-decoration: underline; }
 
 .typing-cursor {
   display: inline-block;
   width: 2px;
   height: 16px;
-  background: #89b4fa;
+  background: var(--typing-cursor);
   animation: blink 0.8s infinite;
   vertical-align: text-bottom;
   margin-left: 2px;
@@ -803,16 +909,16 @@ onMounted(() => {
   gap: 10px;
   max-width: 740px;
   margin: 0 auto;
-  background: #313244;
-  border: 1px solid #45475a;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 14px;
   padding: 8px 8px 8px 14px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.3s ease;
 }
 
 .input-box:focus-within {
-  border-color: #89b4fa;
-  box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.15);
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-shadow);
 }
 
 .chat-input { flex: 1; }
@@ -823,12 +929,12 @@ onMounted(() => {
   box-shadow: none !important;
   padding: 4px 0 !important;
   font-size: 14px;
-  color: #cdd6f4;
+  color: var(--text-primary);
   resize: none;
 }
 
 .chat-input :deep(.el-textarea__inner)::placeholder {
-  color: #6c7086;
+  color: var(--text-muted);
 }
 
 .send-btn {
@@ -838,7 +944,7 @@ onMounted(() => {
 .input-hint {
   text-align: center;
   font-size: 11px;
-  color: #6c7086;
+  color: var(--text-muted);
   margin-top: 6px;
 }
 

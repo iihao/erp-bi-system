@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     # 安全配置
     # ===========================================
     CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8080"],
+        default=["http://localhost:3000", "http://localhost:8080", "http://localhost:9098"],
         description="CORS 允许的源"
     )
     CORS_ALLOW_CREDENTIALS: bool = Field(default=True, description="CORS 允许凭证")

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地产经营分析大屏</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: #e2e8f0;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            text-align: center;
+            padding: 24px 40px 16px;
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.15), transparent);
+            border-bottom: 1px solid rgba(37, 99, 235, 0.3);
+        }
+        .header .eyebrow {
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #60a5fa;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .header h1 {
+            font-size: 30px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #60a5fa, #38bdf8, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 4px;
+        }
+        .header p {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        /* ===== Hero Stats ===== */
+        .hero-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px 40px;
+            flex-wrap: wrap;
+        }
+        .hero-stat {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 16px;
+            padding: 18px 24px;
+            min-width: 170px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-stat::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+        }
+        .hero-stat.blue::before { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+        .hero-stat.green::before { background: linear-gradient(90deg, #059669, #10b981); }
+        .hero-stat.gold::before { background: linear-gradient(90deg, #d97706, #f59e0b); }
+        .hero-stat.coral::before { background: linear-gradient(90deg, #dc2626, #f97316); }
+
+        .hero-stat .label {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .hero-stat .value {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .hero-stat.blue .value { color: #60a5fa; }
+        .hero-stat.green .value { color: #34d399; }
+        .hero-stat.gold .value { color: #fbbf24; }
+        .hero-stat.coral .value { color: #fb923c; }
+
+        .hero-stat .sub {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        /* ===== KPI Pills ===== */
+        .pill-row {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            padding: 0 40px 16px;
+            flex-wrap: wrap;
+        }
+        .pill {
+            min-width: 160px;
+            padding: 12px 18px;
+            border-radius: 14px;
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            backdrop-filter: blur(8px);
+        }
+        .pill .pill-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .pill strong {
+            font-size: 20px;
+            color: #e2e8f0;
+        }
+
+        /* ===== Chart Rows ===== */
+        .chart-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 8px 40px 16px;
+            flex-wrap: wrap;
+        }
+        .chart-box {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.15);
+            border-radius: 16px;
+            padding: 16px;
+            flex: 1;
+            min-width: 420px;
+            max-width: 620px;
+        }
+        .chart-box.full { max-width: 1240px; width: 100%; }
+        .chart-label {
+            font-size: 15px;
+            color: #60a5fa;
+            margin-bottom: 8px;
+            padding-left: 10px;
+            border-left: 3px solid #2563eb;
+            font-weight: 700;
+        }
+        .chart-label .tag {
+            display: inline-block;
+            font-size: 11px;
+            color: #94a3b8;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+            padding: 1px 8px;
+            margin-left: 8px;
+            font-weight: 400;
+        }
+        .chart { width: 100%; height: 320px; }
+        .chart.half { height: 340px; }
+
+        /* ===== Table Section ===== */
+        .table-box {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.15);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 0 40px 20px;
+            max-width: 1240px;
+        }
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead th {
+            background: rgba(51, 65, 85, 0.8);
+            color: #94a3b8;
+            font-weight: 700;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+            white-space: nowrap;
+        }
+        tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+            color: #cbd5e1;
+        }
+        tbody tr:hover { background: rgba(51, 65, 85, 0.3); }
+        .rate-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .rate-bar .bar-bg {
+            width: 80px;
+            height: 8px;
+            background: rgba(71, 85, 105, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .rate-bar .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        .rate-bar .bar-fill.high { background: linear-gradient(90deg, #059669, #34d399); }
+        .rate-bar .bar-fill.mid { background: linear-gradient(90deg, #d97706, #fbbf24); }
+        .rate-bar .bar-fill.low { background: linear-gradient(90deg, #dc2626, #f87171); }
+        .rate-text { font-size: 12px; color: #94a3b8; min-width: 42px; text-align: right; }
+
+        /* ===== Metabase Link ===== */
+        .metabase-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+            transition: transform 0.2s;
+        }
+        .metabase-link:hover { transform: scale(1.05); }
+
+        /* ===== Loading ===== */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #94a3b8;
+        }
+        .loading .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(96, 165, 250, 0.2);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 14px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="eyebrow">行业看板 / 地产经营分析</div>
+        <h1>地产经营分析大屏</h1>
+        <p>聚焦项目去化、销售回款和重点楼盘表现，快速掌握经营态势</p>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div>正在加载数据...</div>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+        <!-- Hero Stats -->
+        <div class="hero-row" id="heroRow"></div>
+
+        <!-- Pills -->
+        <div class="pill-row" id="pillRow"></div>
+
+        <!-- Row 1: Trend + Category -->
+        <div class="chart-row">
+            <div class="chart-box">
+                <div class="chart-label">月度签约回款趋势 <span class="tag">近 6 个月</span></div>
+                <div class="chart" id="trendChart"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-label">回款结构占比 <span class="tag">按来源</span></div>
+                <div class="chart" id="categoryChart"></div>
+            </div>
+        </div>
+
+        <!-- Row 2: Project Ranking + Unit Status -->
+        <div class="chart-row">
+            <div class="chart-box">
+                <div class="chart-label">项目销售排行 Top 8 <span class="tag">全量项目</span></div>
+                <div class="chart" id="rankingChart"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-label">房源状态分布 <span class="tag">实时</span></div>
+                <div class="chart" id="unitChart"></div>
+            </div>
+        </div>
+
+        <!-- Project Performance Table -->
+        <div class="table-box">
+            <div class="chart-label" style="margin-bottom: 12px;">项目销售业绩统计 <span class="tag">全量项目</span></div>
+            <div class="table-wrap">
+                <table id="perfTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>项目名称</th>
+                            <th>城市</th>
+                            <th>总房源数</th>
+                            <th>已售数量</th>
+                            <th>销售金额</th>
+                            <th>去化率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="perfBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <a href="http://localhost:3001" target="_blank" class="metabase-link">  打开 Metabase BI</a>
+
+    <script>
+    // ===== Mock Data =====
+    const DATA = {
+        // Hero KPIs
+        kpis: [
+            { label: '总项目数', value: '12', sub: '覆盖 8 个城市', color: 'blue' },
+            { label: '总房源数', value: '3,286', sub: '可售 1,240 套', color: 'green' },
+            { label: '累计销售额', value: '¥22.6亿', sub: '已签约 1,892 套', color: 'gold' },
+            { label: '已回款金额', value: '¥18.3亿', sub: '回款率 81.0%', color: 'coral' }
+        ],
+        pills: [
+            { label: '平均去化率', value: '57.6%' },
+            { label: '回款率', value: '81.0%' },
+            { label: '重点城市', value: '8 个' }
+        ],
+        // Trend: monthly sign & collection
+        trend: {
+            months: ['2025/12', '2026/01', '2026/02', '2026/03', '2026/04', '2026/05'],
+            signAmount:  [2.8, 3.1, 3.5, 4.2, 3.8, 4.5],   // 亿元
+            collectAmount: [2.5, 2.8, 3.2, 3.8, 3.5, 4.1]    // 亿元
+        },
+        // Collection breakdown
+        collectionBreakdown: [
+            { name: '银行按揭', value: 9.2 },
+            { name: '一次性付款', value: 5.6 },
+            { name: '分期付款', value: 2.8 },
+            { name: '公积金', value: 0.7 }
+        ],
+        // Project ranking
+        projects: [
+            { name: '翡翠湾花园', city: '深圳', total: 486, sold: 412, sales: 4.82, rate: 84.8 },
+            { name: '翰林雅苑', city: '广州', total: 352, sold: 298, sales: 3.65, rate: 84.7 },
+            { name: '龙湖·天街', city: '杭州', total: 420, sold: 336, sales: 3.28, rate: 80.0 },
+            { name: '保利·中央公园', city: '成都', total: 520, sold: 312, sales: 2.95, rate: 60.0 },
+            { name: '万科·城市之光', city: '武汉', total: 380, sold: 209, sales: 2.18, rate: 55.0 },
+            { name: '融创·壹号院', city: '南京', total: 268, sold: 134, sales: 1.86, rate: 50.0 },
+            { name: '碧桂园·凤凰城', city: '长沙', total: 440, sold: 132, sales: 1.42, rate: 30.0 },
+            { name: '恒大·御景半岛', city: '郑州', total: 420, sold: 59, sales: 0.68, rate: 14.0 }
+        ],
+        // Unit status
+        unitStatus: [
+            { name: '已售', value: 1892, color: '#10b981' },
+            { name: '可售', value: 1240, color: '#f59e0b' },
+            { name: '已认筹', value: 98, color: '#6366f1' },
+            { name: '保留', value: 56, color: '#64748b' }
+        ]
+    };
+
+    // ===== Render Hero KPIs =====
+    function renderKPIs() {
+        document.getElementById('heroRow').innerHTML = DATA.kpis.map(k => `
+            <div class="hero-stat ${k.color}">
+                <div class="label">${k.label}</div>
+                <div class="value">${k.value}</div>
+                <div class="sub">${k.sub}</div>
+            </div>
+        `).join('');
+    }
+
+    function renderPills() {
+        document.getElementById('pillRow').innerHTML = DATA.pills.map(p => `
+            <div class="pill">
+                <div class="pill-label">${p.label}</div>
+                <strong>${p.value}</strong>
+            </div>
+        `).join('');
+    }
+
+    // ===== ECharts =====
+    function renderCharts() {
+        // --- Trend ---
+        const trendChart = echarts.init(document.getElementById('trendChart'));
+        trendChart.setOption({
+            tooltip: { trigger: 'axis', backgroundColor: 'rgba(15,23,42,0.9)', borderColor: '#334155',
+                textStyle: { color: '#e2e8f0' } },
+            legend: { data: ['签约金额', '回款金额'], textStyle: { color: '#94a3b8' }, top: 0 },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            xAxis: { type: 'category', data: DATA.trend.months,
+                axisLine: { lineStyle: { color: '#475569' } },
+                axisLabel: { color: '#94a3b8' } },
+            yAxis: { type: 'value', name: '亿元',
+                axisLine: { lineStyle: { color: '#475569' } },
+                axisLabel: { color: '#94a3b8' },
+                splitLine: { lineStyle: { color: 'rgba(71,85,105,0.3)' } },
+                nameTextStyle: { color: '#64748b' } },
+            series: [
+                { name: '签约金额', type: 'bar', barWidth: '28%', data: DATA.trend.signAmount,
+                    itemStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[
+                        {offset:0,color:'#3b82f6'},{offset:1,color:'#1d4ed8'}]), borderRadius: [4,4,0,0] }},
+                { name: '回款金额', type: 'bar', barWidth: '28%', data: DATA.trend.collectAmount,
+                    itemStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[
+                        {offset:0,color:'#34d399'},{offset:1,color:'#059669'}]), borderRadius: [4,4,0,0] }}
+            ]
+        });
+
+        // --- Collection Breakdown (Donut) ---
+        const catChart = echarts.init(document.getElementById('categoryChart'));
+        catChart.setOption({
+            tooltip: { trigger: 'item', backgroundColor: 'rgba(15,23,42,0.9)', borderColor: '#334155',
+                textStyle: { color: '#e2e8f0' }, formatter: '{b}: {c}亿元 ({d}%)' },
+            series: [{
+                type: 'pie', radius: ['42%', '68%'],
+                itemStyle: { borderRadius: 6, borderColor: '#0f172a', borderWidth: 2 },
+                label: { color: '#94a3b8', formatter: '{b}\n{d}%', fontSize: 12 },
+                emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+                data: DATA.collectionBreakdown.map((d, i) => ({
+                    ...d,
+                    itemStyle: { color: ['#3b82f6','#10b981','#f59e0b','#6366f1'][i] }
+                }))
+            }]
+        });
+
+        // --- Project Ranking (Horizontal Bar) ---
+        const sorted = [...DATA.projects].sort((a, b) => b.sales - a.sales);
+        const rankChart = echarts.init(document.getElementById('rankingChart'));
+        rankChart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                backgroundColor: 'rgba(15,23,42,0.9)', borderColor: '#334155',
+                textStyle: { color: '#e2e8f0' },
+                formatter: p => `${p[0].name}<br/>销售金额: ${p[0].value} 亿元` },
+            grid: { left: '3%', right: '14%', bottom: '3%', containLabel: true },
+            xAxis: { type: 'value', name: '亿元',
+                axisLine: { lineStyle: { color: '#475569' } },
+                axisLabel: { color: '#94a3b8' },
+                splitLine: { lineStyle: { color: 'rgba(71,85,105,0.3)' } },
+                nameTextStyle: { color: '#64748b' } },
+            yAxis: { type: 'category',
+                data: sorted.map(p => p.name).reverse(),
+                axisLine: { lineStyle: { color: '#475569' } },
+                axisLabel: { color: '#cbd5e1', fontSize: 12 } },
+            series: [{
+                type: 'bar', barWidth: '55%',
+                data: sorted.map(p => p.sales).reverse(),
+                itemStyle: {
+                    borderRadius: [0, 4, 4, 0],
+                    color: new echarts.graphic.LinearGradient(0,0,1,0,[
+                        {offset:0,color:'#1d4ed8'},{offset:1,color:'#3b82f6'}])
+                },
+                label: { show: true, position: 'right', color: '#94a3b8', fontSize: 11,
+                    formatter: p => p.value + ' 亿' }
+            }]
+        });
+
+        // --- Unit Status (Rose Pie) ---
+        const unitChart = echarts.init(document.getElementById('unitChart'));
+        unitChart.setOption({
+            tooltip: { trigger: 'item', backgroundColor: 'rgba(15,23,42,0.9)', borderColor: '#334155',
+                textStyle: { color: '#e2e8f0' }, formatter: '{b}: {c} 套 ({d}%)' },
+            series: [{
+                type: 'pie', radius: ['30%', '62%'], roseType: 'radius',
+                itemStyle: { borderRadius: 6, borderColor: '#0f172a', borderWidth: 2 },
+                label: { color: '#94a3b8', formatter: '{b}: {c}套', fontSize: 12 },
+                emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+                data: DATA.unitStatus
+            }]
+        });
+
+        // Responsive
+        window.addEventListener('resize', () => {
+            trendChart.resize(); catChart.resize(); rankChart.resize(); unitChart.resize();
+        });
+    }
+
+    // ===== Table =====
+    function renderTable() {
+        const sorted = [...DATA.projects].sort((a, b) => b.sales - a.sales);
+        document.getElementById('perfBody').innerHTML = sorted.map((p, i) => {
+            const barClass = p.rate >= 80 ? 'high' : p.rate >= 50 ? 'mid' : 'low';
+            return `<tr>
+                <td>${i + 1}</td>
+                <td style="color:#e2e8f0;font-weight:600">${p.name}</td>
+                <td>${p.city}</td>
+                <td style="text-align:right">${p.total}</td>
+                <td style="text-align:right">${p.sold}</td>
+                <td style="text-align:right;color:#fbbf24;font-weight:600">¥${p.sales.toFixed(2)} 亿</td>
+                <td>
+                    <span class="rate-bar">
+                        <span class="bar-bg"><span class="bar-fill ${barClass}" style="width:${p.rate}%"></span></span>
+                        <span class="rate-text">${p.rate}%</span>
+                    </span>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ===== Init =====
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            renderKPIs();
+            renderPills();
+            renderCharts();
+            renderTable();
+        }, 400);
+    });
+    </script>
+</body>
+</html>

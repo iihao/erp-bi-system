@@ -837,6 +837,7 @@ onUnmounted(() => {
    ======================================== */
 .portal-main {
   flex: 1;
+  position: relative;
   padding: var(--spacing-6);
   overflow-y: auto;
   background:

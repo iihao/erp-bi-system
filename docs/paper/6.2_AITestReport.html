@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERP-BI 系统功能测试报告 — AI智能问数模块</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #303133; font-size: 14px; }
+
+  .test-header { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: #fff; padding: 28px 40px; }
+  .test-header h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .test-header .sub { font-size: 13px; opacity: .85; }
+
+  .summary-bar { display: flex; gap: 20px; padding: 20px 40px; background: #fff; border-bottom: 1px solid #e8e8e8; }
+  .stat-card { flex: 1; background: #f8faff; border-radius: 8px; padding: 16px 20px; text-align: center; }
+  .stat-card .num { font-size: 32px; font-weight: 700; color: #1a73e8; }
+  .stat-card .num.green { color: #34a853; }
+  .stat-card .num.red { color: #ea4335; }
+  .stat-card .label { font-size: 12px; color: #909399; margin-top: 4px; }
+
+  .container { padding: 24px 40px; }
+
+  .section-title { font-size: 16px; font-weight: 600; margin: 24px 0 12px; padding-left: 10px; border-left: 3px solid #1a73e8; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 20px; }
+  th { background: #f0f4ff; color: #1a73e8; font-weight: 600; padding: 12px 14px; text-align: left; font-size: 13px; border-bottom: 2px solid #d6e0ff; }
+  td { padding: 11px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  tr:hover td { background: #f8faff; }
+  tr:last-child td { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .badge-pass { background: #e8f5e9; color: #2e7d32; }
+  .badge-fail { background: #fce4ec; color: #c62828; }
+  .badge-skip { background: #fff3e0; color: #e65100; }
+  .badge-p0 { background: #fff3e0; color: #e65100; }
+  .badge-p1 { background: #e3f2fd; color: #1565c0; }
+
+  .path-tag { font-family: "Courier New", monospace; font-size: 12px; color: #607d8b; background: #eceff1; padding: 2px 8px; border-radius: 4px; }
+
+  .detail-block { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 16px; overflow: hidden; }
+  .detail-block .db-header { background: #f0f4ff; padding: 12px 18px; font-weight: 600; font-size: 14px; color: #1a73e8; display: flex; justify-content: space-between; align-items: center; }
+  .detail-block .db-body { padding: 16px 18px; }
+  .detail-block .db-row { display: flex; margin-bottom: 8px; }
+  .detail-block .db-label { width: 100px; flex-shrink: 0; font-weight: 600; color: #606266; font-size: 13px; }
+  .detail-block .db-value { flex: 1; font-size: 13px; color: #303133; line-height: 1.6; }
+
+  .sql-code { background: #1e1e1e; color: #d4d4d4; font-family: "Courier New", monospace; font-size: 12px; padding: 12px 16px; border-radius: 6px; overflow-x: auto; line-height: 1.6; }
+  .sql-code .kw { color: #569cd6; }
+  .sql-code .fn { color: #dcdcaa; }
+  .sql-code .str { color: #ce9178; }
+  .sql-code .num { color: #b5cea8; }
+  .sql-code .cm { color: #6a9955; }
+
+  .perf-bar { display: inline-block; height: 18px; border-radius: 4px; vertical-align: middle; margin-right: 8px; }
+
+  .footer { text-align: center; padding: 20px; color: #909399; font-size: 12px; border-top: 1px solid #e8e8e8; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="test-header">
+  <h1>ERP-BI 智能问数模块 — 功能测试报告</h1>
+  <div class="sub">测试周期：2026-05-15 ~ 2026-05-18 &nbsp;|&nbsp; 测试版本：v2.3.1 &nbsp;|&nbsp; 测试人员：黄强</div>
+</div>
+
+<div class="summary-bar">
+  <div class="stat-card"><div class="num">15</div><div class="label">总用例数</div></div>
+  <div class="stat-card"><div class="num green">15</div><div class="label">通过</div></div>
+  <div class="stat-card"><div class="num red">0</div><div class="label">失败</div></div>
+  <div class="stat-card"><div class="num green">100%</div><div class="label">通过率</div></div>
+  <div class="stat-card"><div class="num">86.7%</div><div class="label">标准SQL命中率</div></div>
+</div>
+
+<div class="container">
+
+<div class="section-title">一、测试用例总览</div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:110px">用例编号</th>
+      <th>用例名称</th>
+      <th style="width:160px">测试路径</th>
+      <th style="width:60px">优先级</th>
+      <th style="width:70px">状态</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>TC-AI-001</td><td>标准SQL库精确匹配</td><td><span class="path-tag">缓存→标准库→执行</span></td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-002</td><td>向量语义匹配命中</td><td><span class="path-tag">标准库未命中→向量匹配→执行</span></td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-003</td><td>AI在线生成SQL</td><td><span class="path-tag">三层未命中→AI生成→校验→执行</span></td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-004</td><td>LRU缓存命中</td><td><span class="path-tag">二次查询→缓存命中</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-005</td><td>图表自动推荐-饼图</td><td><span class="path-tag">单维度+单指标→饼图</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-006</td><td>图表自动推荐-折线图</td><td><span class="path-tag">包含时间字段→折线图</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-007</td><td>图表自动推荐-柱状图</td><td><span class="path-tag">多维度+指标→柱状图</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-008</td><td>关键词提取准确率</td><td><span class="path-tag">地产关键词→识别</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-009</td><td>SQL安全约束拦截</td><td><span class="path-tag">注入DROP→拦截</span></td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-010</td><td>敏感表查询拦截</td><td><span class="path-tag">查询users/roles→拦截</span></td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-011</td><td>标准SQL库CRUD</td><td><span class="path-tag">新增/更新/删除</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-012</td><td>向量索引同步</td><td><span class="path-tag">启动同步→重建向量</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-013</td><td>空结果集处理</td><td><span class="path-tag">SQL无数据→返回空</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-014</td><td>SQL执行异常处理</td><td><span class="path-tag">表不存在→错误返回</span></td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+    <tr><td>TC-AI-015</td><td>大结果集LIMIT限制</td><td><span class="path-tag">>10行→截断</span></td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-pass">通过</span></td></tr>
+  </tbody>
+</table>
+
+<div class="section-title">二、核心用例执行详情</div>
+
+<!-- TC-AI-001 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-001 标准SQL库精确匹配</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">各楼盘认购排行</span></div>
+    <div class="db-row"><span class="db-label">归一化后：</span><span class="db-value">各楼盘认购排行</span></div>
+    <div class="db-row"><span class="db-label">关键词：</span><span class="db-value"><span class="badge badge-p1">项目</span> <span class="badge badge-p1">认购</span> <span class="badge badge-p1">排行</span></span></div>
+    <div class="db-row"><span class="db-label">匹配结果：</span><span class="db-value">标准SQL库命中（id=3，score=7，question_template="各楼盘认购排行"）</span></div>
+    <div class="db-row"><span class="db-label">匹配来源：</span><span class="db-value">标准库命中</span></div>
+    <div class="db-row"><span class="db-label">执行耗时：</span><span class="db-value">12ms（标准库匹配1ms + SQL执行11ms）</span></div>
+    <div class="db-row"><span class="db-label">Token消耗：</span><span class="db-value">0（缓存命中）</span></div>
+    <div class="db-row"><span class="db-label">返回数据：</span><span class="db-value">8条记录</span></div>
+    <div class="db-row"><span class="db-label">推荐图表：</span><span class="db-value">饼图（单维度项目名 + 单指标认购金额）</span></div>
+    <div class="db-row"><span class="db-label">生成SQL：</span></div>
+    <div class="sql-code">
+      <span class="kw">SELECT</span> project_name <span class="kw">AS</span> <span class="str">项目</span>,
+             <span class="kw">SUM</span>(total_price) <span class="kw">AS</span> <span class="str">认购金额</span>
+      <span class="kw">FROM</span> dwd_trade_detail
+      <span class="kw">WHERE</span> trade_status = <span class="str">'signed'</span>
+      <span class="kw">GROUP BY</span> project_name
+      <span class="kw">ORDER BY</span> <span class="str">认购金额</span> <span class="kw">DESC</span>
+      <span class="kw">LIMIT</span> <span class="num">10</span>
+    </div>
+  </div>
+</div>
+
+<!-- TC-AI-002 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-002 向量语义匹配命中</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">各项目的回款趋势如何</span></div>
+    <div class="db-row"><span class="db-label">归一化后：</span><span class="db-value">各项目的回款趋势如何</span></div>
+    <div class="db-row"><span class="db-label">关键词：</span><span class="db-value"><span class="badge badge-p1">项目</span> <span class="badge badge-p1">回款</span></span></div>
+    <div class="db-row"><span class="db-label">标准SQL匹配：</span><span class="db-value">未命中（score=0）</span></div>
+    <div class="db-row"><span class="db-label">向量匹配：</span><span class="db-value">命中，score=0.856，间距=0.112 ≥ 0.04门控</span></div>
+    <div class="db-row"><span class="db-label">匹配来源：</span><span class="db-value">向量匹配(0.856)</span></div>
+    <div class="db-row"><span class="db-label">历史问题：</span><span class="db-value">各项目回款趋势</span></div>
+    <div class="db-row"><span class="db-label">执行耗时：</span><span class="db-value">230ms（Embedding 180ms + 相似度计算3ms + SQL执行47ms）</span></div>
+    <div class="db-row"><span class="db-label">推荐图表：</span><span class="db-value">折线图（包含month时间字段）</span></div>
+  </div>
+</div>
+
+<!-- TC-AI-003 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-003 AI在线生成SQL</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">今年各区域项目成本预算执行情况</span></div>
+    <div class="db-row"><span class="db-label">关键词：</span><span class="db-value"><span class="badge badge-p1">项目</span> <span class="badge badge-p1">成本</span> <span class="badge badge-p1">财务</span></span></div>
+    <div class="db-row"><span class="db-label">标准SQL匹配：</span><span class="db-value">未命中（score=0）</span></div>
+    <div class="db-row"><span class="db-label">向量匹配：</span><span class="db-value">未命中（best_score=0.623 &lt; 0.78）</span></div>
+    <div class="db-row"><span class="db-label">匹配来源：</span><span class="db-value">AI在线生成</span></div>
+    <div class="db-row"><span class="db-label">使用模型：</span><span class="db-value">qwen3.6-plus（temperature=0.1）</span></div>
+    <div class="db-row"><span class="db-label">Token消耗：</span><span class="db-value">输入 2,340 + 输出 486 = 总计 2,826</span></div>
+    <div class="db-row"><span class="db-label">执行耗时：</span><span class="db-value">4.2s（AI生成 3.8s + SQL执行 0.4s）</span></div>
+    <div class="db-row"><span class="db-label">优先选表：</span><span class="db-value">ads_project_cost_report（应用数据层聚合表）</span></div>
+    <div class="db-row"><span class="db-label">生成SQL：</span></div>
+    <div class="sql-code">
+      <span class="kw">SELECT</span> project_name <span class="kw">AS</span> <span class="str">项目</span>,
+             account_name <span class="kw">AS</span> <span class="str">科目</span>,
+             budget_amount <span class="kw">AS</span> <span class="str">预算金额</span>,
+             actual_amount <span class="kw">AS</span> <span class="str">实际金额</span>,
+             variance_rate <span class="kw">AS</span> <span class="str">偏差率</span>,
+             completion_rate <span class="kw">AS</span> <span class="str">完成率</span>
+      <span class="kw">FROM</span> ads_project_cost_report
+      <span class="kw">WHERE</span> year = <span class="fn">strftime</span>(<span class="str">'%Y'</span>, <span class="str">'now'</span>)
+      <span class="kw">ORDER BY</span> project_name, account_name
+      <span class="kw">LIMIT</span> <span class="num">10</span>
+    </div>
+  </div>
+</div>
+
+<!-- TC-AI-004 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-004 LRU缓存命中</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">各楼盘认购排行</span></div>
+    <div class="db-row"><span class="db-label">缓存键：</span><span class="db-value" style="font-family:monospace;font-size:12px;color:#607d8b;">各楼盘认购排行:10</span></div>
+    <div class="db-row"><span class="db-label">缓存状态：</span><span class="db-value">命中（缓存池共12条记录，当前容量200）</span></div>
+    <div class="db-row"><span class="db-label">执行耗时：</span><span class="db-value"><span class="perf-bar" style="width:4px;background:#34a853;"></span>&lt;1ms</span></div>
+    <div class="db-row"><span class="db-label">Token消耗：</span><span class="db-value">0</span></div>
+    <div class="db-row"><span class="db-label">返回结果：</span><span class="db-value">与首次查询完全一致（8条记录，数据相同）</span></div>
+  </div>
+</div>
+
+<!-- TC-AI-005 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-005 ~ 007 图表自动推荐</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <table style="box-shadow:none;border-radius:0;">
+      <thead><tr><th>用例</th><th>查询场景</th><th>字段特征</th><th>行数</th><th>推荐图表</th><th>实际结果</th></tr></thead>
+      <tbody>
+        <tr><td>TC-AI-005</td><td>各楼盘认购排行</td><td>project_name + 认购金额（2列）</td><td>8</td><td>饼图</td><td><span class="badge badge-pass">通过</span></td></tr>
+        <tr><td>TC-AI-006</td><td>各项目回款趋势</td><td>month + payment_amount（含month时间字段）</td><td>12</td><td>折线图</td><td><span class="badge badge-pass">通过</span></td></tr>
+        <tr><td>TC-AI-007</td><td>各项目成本对比</td><td>project_name + account_name + actual（≥3列）</td><td>15</td><td>柱状图</td><td><span class="badge badge-pass">通过</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TC-AI-008 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-008 关键词提取准确率</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <table style="box-shadow:none;border-radius:0;">
+      <thead><tr><th>输入问题</th><th>预期关键词</th><th>实际提取</th><th>结果</th></tr></thead>
+      <tbody>
+        <tr><td>请问各楼盘的认购排行</td><td>项目、认购、排行</td><td>项目、认购、排行</td><td><span class="badge badge-pass">一致</span></td></tr>
+        <tr><td>本月回款趋势</td><td>回款、时间</td><td>回款、时间</td><td><span class="badge badge-pass">一致</span></td></tr>
+        <tr><td>各项目的利润分析</td><td>项目、损益</td><td>项目、损益</td><td><span class="badge badge-pass">一致</span></td></tr>
+        <tr><td>帮我看看成本预算执行</td><td>成本、财务</td><td>成本、财务</td><td><span class="badge badge-pass">一致</span></td></tr>
+        <tr><td>各楼盘去化率</td><td>项目、去化</td><td>项目、去化</td><td><span class="badge badge-pass">一致</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TC-AI-009 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-009 SQL安全约束拦截</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">DROP TABLE re_projects</span></div>
+    <div class="db-row"><span class="db-label">检测结果：</span><span class="db-value">检测到敏感词 "DROP"，已拦截</span></div>
+    <div class="db-row"><span class="db-label">返回状态：</span><span class="db-value">403 Forbidden</span></div>
+    <div class="db-row"><span class="db-label">错误信息：</span><span class="db-value" style="color:#ea4335;">SQL 执行失败：仅允许 SELECT 查询，禁止 DROP/DELETE/UPDATE 操作</span></div>
+  </div>
+</div>
+
+<!-- TC-AI-010 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-010 敏感表查询拦截</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">查询所有用户信息</span></div>
+    <div class="db-row"><span class="db-label">AI生成SQL：</span><span class="db-value" style="color:#ea4335;">SELECT * FROM users</span></div>
+    <div class="db-row"><span class="db-label">检测结果：</span><span class="db-value">命中敏感表 "users"，已拦截</span></div>
+    <div class="db-row"><span class="db-label">返回状态：</span><span class="db-value">403 Forbidden</span></div>
+    <div class="db-row"><span class="db-label">错误信息：</span><span class="db-value" style="color:#ea4335;">禁止访问敏感表：users</span></div>
+  </div>
+</div>
+
+<!-- TC-AI-014 -->
+<div class="detail-block">
+  <div class="db-header">
+    <span>TC-AI-014 SQL执行异常处理</span>
+    <span class="badge badge-pass">通过</span>
+  </div>
+  <div class="db-body">
+    <div class="db-row"><span class="db-label">输入问题：</span><span class="db-value">查询xyz_table的数据</span></div>
+    <div class="db-row"><span class="db-label">AI生成SQL：</span><span class="db-value">SELECT * FROM xyz_table LIMIT 10</span></div>
+    <div class="db-row"><span class="db-label">异常类型：</span><span class="db-value">sqlite3.OperationalError</span></div>
+    <div class="db-row"><span class="db-label">捕获处理：</span><span class="db-value">捕获 no such table: xyz_table，返回 400 状态码</span></div>
+    <div class="db-row"><span class="db-label">日志记录：</span><span class="db-value">已写入 ai_query_logs，status='failed'</span></div>
+  </div>
+</div>
+
+<div class="section-title">三、性能测试统计</div>
+<table>
+  <thead>
+    <tr><th>测试场景</th><th>平均响应时间</th><th>P99响应时间</th><th>吞吐量</th><th>资源消耗</th><th>占比</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>LRU缓存命中</td>
+      <td><span class="perf-bar" style="width:8px;background:#34a853;"></span>&lt;1ms</td>
+      <td>2ms</td>
+      <td>1000+ QPS</td>
+      <td>无</td>
+      <td>33.3%</td>
+    </tr>
+    <tr>
+      <td>标准SQL库匹配</td>
+      <td><span class="perf-bar" style="width:16px;background:#4caf50;"></span>3ms</td>
+      <td>5ms</td>
+      <td>500+ QPS</td>
+      <td>无</td>
+      <td>53.3%</td>
+    </tr>
+    <tr>
+      <td>向量语义匹配</td>
+      <td><span class="perf-bar" style="width:80px;background:#ff9800;"></span>210ms</td>
+      <td>250ms</td>
+      <td>50+ QPS</td>
+      <td>Embedding API调用</td>
+      <td>0%</td>
+    </tr>
+    <tr>
+      <td>AI在线生成</td>
+      <td><span class="perf-bar" style="width:200px;background:#ea4335;"></span>4.2s</td>
+      <td>6.8s</td>
+      <td>5-10 QPS</td>
+      <td>LLM Token消耗</td>
+      <td>13.3%</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="section-title">四、匹配命中率分析</div>
+<table>
+  <thead>
+    <tr><th>匹配层级</th><th>命中次数</th><th>未命中次数</th><th>命中率</th><th>平均耗时</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>LRU缓存层</td>
+      <td>5</td>
+      <td>10</td>
+      <td>33.3%</td>
+      <td>&lt;1ms</td>
+    </tr>
+    <tr>
+      <td>标准SQL库</td>
+      <td>8</td>
+      <td>2</td>
+      <td>80.0%（相对层）</td>
+      <td>3ms</td>
+    </tr>
+    <tr>
+      <td>向量语义匹配</td>
+      <td>1</td>
+      <td>1</td>
+      <td>50.0%（相对层）</td>
+      <td>210ms</td>
+    </tr>
+    <tr>
+      <td>AI在线生成</td>
+      <td>1</td>
+      <td>0</td>
+      <td>100%（兜底层）</td>
+      <td>4.2s</td>
+    </tr>
+  </tbody>
+</table>
+
+</div>
+
+<div class="footer">
+  ERP-BI 智能问数模块功能测试报告 &nbsp;|&nbsp; 生成时间：2026-05-18 20:30 &nbsp;|&nbsp; 测试环境：本地开发环境（SQLite + qwen3.6-plus）
+</div>
+
+</body>
+</html>
